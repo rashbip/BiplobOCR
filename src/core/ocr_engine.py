@@ -39,7 +39,10 @@ def detect_pdf_type(pdf):
         print(f"Detection Error: {e}")
         return "image"
 
-def run_ocr(input_pdf, output_pdf, password, force):
+def run_ocr(input_pdf, output_pdf, password, force, options=None):
+    if options is None:
+        options = {}
+        
     os.makedirs(TEMP_DIR, exist_ok=True)
     sidecar = os.path.join(TEMP_DIR, "ocr.txt")
 
@@ -47,19 +50,35 @@ def run_ocr(input_pdf, output_pdf, password, force):
         "ocrmypdf",
         "--language", "ben+eng",
         "--output-type", "pdf",
-        "--optimize", "0",
         "--sidecar", sidecar,
     ]
 
+    # Parsing Options
     if force:
         cmd.append("--force-ocr")
-
+        
     if password:
         cmd += ["--pdf-password", password]
+
+    # Advanced Features
+    if options.get('deskew'):
+        cmd.append("--deskew")
+    
+    if options.get('clean'):
+        cmd.append("--clean")
+        
+    if options.get('rotate'):
+        cmd.append("--rotate-pages")
+        
+    # Optimization level
+    opt_level = str(options.get('optimize', '0')) # Default to 0 (fast)
+    cmd += ["--optimize", opt_level]
 
     cmd += [input_pdf, output_pdf]
 
     # Capture output to check for specific errors if it fails
+    # We allow stdout to pass through execution for real-time logging if needed, 
+    # but for now capturing is safer for error analysis.
     p = subprocess.run(cmd, capture_output=True, text=True)
     
     if p.returncode != 0:
