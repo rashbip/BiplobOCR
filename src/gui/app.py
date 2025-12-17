@@ -207,6 +207,7 @@ class BiplobOCR(tk.Tk):
         self.build_scan_view()
         self.build_settings_view()
         self.build_history_view()
+        self.build_batch_view()
 
         # Init
         self.switch_tab("home")
@@ -380,6 +381,147 @@ class BiplobOCR(tk.Tk):
         # Success Overlay (Initially Hidden)
         self.success_frame = ttk.Frame(self.viewer_container, style="Card.TFrame", padding=20)
 
+    def build_batch_view(self):
+        # Header
+        ttk.Label(self.view_batch, text="Batch Processing", style="Header.TLabel").pack(anchor="w", pady=(20, 10))
+        ttk.Label(self.view_batch, text="Process multiple documents automatically.", foreground="gray").pack(anchor="w", pady=(0, 20))
+
+        # Toolbar
+        toolbar = ttk.Frame(self.view_batch)
+        toolbar.pack(fill="x", pady=5)
+        
+        ttk.Button(toolbar, text="➕ Add Files", command=self.add_batch_files, style="Accent.TButton", width=15).pack(side="left", padx=(0, 5))
+        ttk.Button(toolbar, text="🗑 Clear List", command=self.clear_batch_files).pack(side="left")
+
+        # File List (Treeview)
+        cols = ("Filename", "Status")
+        self.batch_tree = ttk.Treeview(self.view_batch, columns=cols, show="headings", height=10)
+        self.batch_tree.pack(fill="both", expand=True, pady=10)
+        
+        self.batch_tree.heading("Filename", text="Filename")
+        self.batch_tree.heading("Status", text="Status")
+        
+        self.batch_tree.column("Filename", width=400)
+        self.batch_tree.column("Status", width=150)
+        
+        # Options & Actions
+        controls = ttk.Frame(self.view_batch, padding=10, style="Card.TFrame")
+        controls.pack(fill="x", pady=10)
+        
+        # Use existing vars
+        opt_box = ttk.Frame(controls, style="Card.TFrame")
+        opt_box.pack(side="left", fill="both", expand=True)
+        ttk.Label(opt_box, text="Batch Options", font=("Segoe UI", 10, "bold"), background=SURFACE_COLOR).pack(anchor="w")
+        
+        ttk.Checkbutton(opt_box, text=app_state.t("opt_deskew"), variable=self.var_deskew).pack(side="left", padx=5)
+        ttk.Checkbutton(opt_box, text=app_state.t("opt_clean"), variable=self.var_clean).pack(side="left", padx=5)
+        
+        self.btn_start_batch = ttk.Button(controls, text="▶ Start Batch", command=self.start_batch_processing, style="Accent.TButton", width=20)
+        self.btn_start_batch.pack(side="right")
+        
+        # Batch Progress
+        self.batch_progress = ttk.Progressbar(self.view_batch, mode="determinate", style="Horizontal.TProgressbar")
+        self.batch_progress.pack(fill="x", pady=5)
+        
+        self.lbl_batch_status = ttk.Label(self.view_batch, text="Ready", foreground="gray")
+        self.lbl_batch_status.pack(anchor="w")
+
+        self.batch_files = [] # List of tuples/dicts: {"path": str, "id": str, "status": str}
+
+    def add_batch_files(self):
+        files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
+        if not files: return
+        
+        for f in files:
+            # Check duplicates
+            if any(bf["path"] == f for bf in self.batch_files): continue
+            
+            item_id = self.batch_tree.insert("", "end", values=(os.path.basename(f), "Pending"))
+            self.batch_files.append({"path": f, "id": item_id, "status": "Pending"})
+            
+        self.lbl_batch_status.config(text=f"{len(self.batch_files)} documents added.")
+
+    def clear_batch_files(self):
+        self.batch_tree.delete(*self.batch_tree.get_children())
+        self.batch_files = []
+        self.lbl_batch_status.config(text="List cleared.")
+
+    def start_batch_processing(self):
+        if not self.batch_files:
+            messagebox.showwarning("Empty", "Please add files to process.")
+            return
+            
+        # Ask output directory
+        out_dir = filedialog.askdirectory(title="Select Output Folder")
+        if not out_dir: return
+        
+        self.btn_start_batch.config(state="disabled")
+        self.batch_progress["value"] = 0
+        self.batch_progress["maximum"] = len(self.batch_files)
+        
+        # Save config
+        app_state.set_option("deskew", self.var_deskew.get())
+        app_state.set_option("clean", self.var_clean.get())
+        app_state.save_config({})
+
+        threading.Thread(target=self.run_batch_logic, args=(out_dir,), daemon=True).start()
+
+    def run_batch_logic(self, out_dir):
+        opts = {
+            "deskew": self.var_deskew.get(),
+            "clean": self.var_clean.get(),
+            "rotate": self.var_rotate.get(),
+            "optimize": self.var_optimize.get(),
+        }
+        
+        success_count = 0
+        
+        for i, item in enumerate(self.batch_files):
+            fpath = item["path"]
+            item_id = item["id"]
+            fname = os.path.basename(fpath)
+            
+            # Update UI to "Processing"
+            self.after(0, lambda id=item_id: self.batch_tree.set(id, "Status", "Processing..."))
+            self.after(0, lambda v=i+1, f=fname: self.update_batch_ui_status(v, f))
+            
+            try:
+                # Filename prefix logic
+                out_name = f"biplob_ocr_{fname}"
+                out_path = os.path.join(out_dir, out_name)
+                
+                # Check password (basic check, batch assumes no pass or skip)
+                pw = None
+                try: 
+                    with pikepdf.open(fpath): pass
+                except:
+                    raise Exception("Password Required")
+
+                run_ocr(fpath, out_path, pw, force=True, options=opts)
+                
+                # Success
+                self.after(0, lambda id=item_id: self.batch_tree.set(id, "Status", "✅ Done"))
+                history.add_entry(fname, "Batch Success", "N/A")
+                success_count += 1
+                
+            except Exception as e:
+                # Fail
+                self.after(0, lambda id=item_id: self.batch_tree.set(id, "Status", "❌ Failed"))
+                history.add_entry(fname, "Batch Failed")
+                print(f"Batch Error on {fname}: {e}")
+            
+            self.after(0, lambda v=i+1: self.batch_progress.configure(value=v))
+        
+        self.after(0, lambda: self.on_batch_complete(success_count, len(self.batch_files)))
+
+    def update_batch_ui_status(self, idx, fname):
+        self.lbl_batch_status.config(text=f"Processing {idx}/{len(self.batch_files)}: {fname}")
+
+    def on_batch_complete(self, success, total):
+        self.btn_start_batch.config(state="normal")
+        self.lbl_batch_status.config(text=f"Batch Run Completed. {success}/{total} successful.")
+        messagebox.showinfo("Batch Complete", f"Processing Finished.\nSuccessful: {success}\nTotal: {total}")
+
     def build_settings_view(self):
         # Use inline settings
         lbl = ttk.Label(self.view_settings, text=app_state.t("settings_title"), font=("Segoe UI", 20, "bold"))
@@ -394,10 +536,6 @@ class BiplobOCR(tk.Tk):
         cb_lang = ttk.Combobox(f, textvariable=self.var_lang, values=["en", "bn"], state="readonly")
         cb_lang.pack(fill="x", pady=(5, 10))
         cb_lang.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
-
-        # No theme switcher needed really if we enforced it, but keeps persistence logic
-        # ttk.Label(f, text=app_state.t("lbl_theme")).pack(anchor="w")
-        # .. removed theme toggle since we are strict on company branding ..
 
         ttk.Label(self.view_settings, text="Changes require restart to fully apply UI text translations.", foreground="gray").pack(pady=20)
         
