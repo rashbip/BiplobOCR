@@ -1,0 +1,11 @@
+{
+    "theme": "system",
+    "language": "en",
+    "ocr_options": {
+        "deskew": false,
+        "clean": false,
+        "rotate": false,
+        "force": true,
+        "optimize": "0"
+    }
+}
