@@ -1,3 +1,4 @@
+
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 import shutil
@@ -13,24 +14,29 @@ from PIL import Image, ImageTk
 from ..core.constants import APP_NAME, TEMP_DIR
 from ..core.ocr_engine import detect_pdf_type, run_ocr, run_tesseract_export
 from ..core.config_manager import state as app_state
+from ..core.history_manager import history
 from .pdf_viewer import PDFViewer
 from .settings_dialog import SettingsDialog
 
-# Import sv_ttk conditionally or manage theme manually
-try:
-    import sv_ttk
-except ImportError:
-    sv_ttk = None
+# Company Theme - Strict adherence
+THEME_COLOR = "#A50F0F"
+THEME_COLOR_HOVER = "#c91212"
+THEME_COLOR_ACTIVE = "#8a0c0c"
+BG_COLOR = "#1e1e1e"
+SURFACE_COLOR = "#2d2d2d"
+FG_COLOR = "#ffffff"
 
 class BiplobOCR(tk.Tk):
     def __init__(self):
         super().__init__()
         self.withdraw()
-        self.load_settings()
         
         self.title(app_state.t("app_title"))
         self.geometry("1280x850")
         self.minsize(1000, 700)
+        self.configure(bg=BG_COLOR)
+        
+        self.setup_custom_theme()
         
         self.current_pdf_path = None
         self.current_pdf_password = None
@@ -39,35 +45,134 @@ class BiplobOCR(tk.Tk):
         self.deiconify()
 
     def load_settings(self):
-        theme = app_state.get("theme")
-        if sv_ttk:
-            if theme == "dark":
-                sv_ttk.set_theme("dark")
-            elif theme == "light":
-                sv_ttk.set_theme("light")
-            else:
-                try:
-                    import darkdetect
-                    is_dark = darkdetect.isDark()
-                    sv_ttk.set_theme("dark" if is_dark else "light")
-                except:
-                    sv_ttk.set_theme("light") 
+        # We handle theme manually now
+        pass
+
+    def setup_custom_theme(self):
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")
+        except:
+            style.theme_use("default")
+
+        # Global Colors
+        self.option_add("*background", BG_COLOR)
+        self.option_add("*foreground", FG_COLOR)
+        self.option_add("*selectBackground", THEME_COLOR)
+        self.option_add("*selectForeground", "white")
+        self.option_add("*Entry.fieldBackground", SURFACE_COLOR)
+        self.option_add("*Listbox.background", SURFACE_COLOR)
+
+        # -- TTK Styles --
+        
+        # General Defaults
+        style.configure(".", 
+            background=BG_COLOR, 
+            foreground=FG_COLOR, 
+            troughcolor=BG_COLOR,
+            fieldbackground=SURFACE_COLOR,
+            borderwidth=0,
+            darkcolor=BG_COLOR,
+            lightcolor=BG_COLOR,
+            selectbackground=THEME_COLOR
+        )
+
+        # TFrame
+        style.configure("TFrame", background=BG_COLOR)
+        style.configure("Card.TFrame", background=SURFACE_COLOR, relief="flat")
+
+        # TLabel
+        style.configure("TLabel", background=BG_COLOR, foreground=FG_COLOR, font=("Segoe UI", 10))
+        
+        # Heading Labels
+        style.configure("Header.TLabel", font=("Segoe UI Variable Display", 24, "bold"), foreground=THEME_COLOR)
+
+        # TButton (Standard)
+        style.configure("TButton", 
+            background=SURFACE_COLOR, 
+            foreground=FG_COLOR, 
+            borderwidth=0, 
+            padding=6,
+            font=("Segoe UI", 10)
+        )
+        style.map("TButton", 
+            background=[("active", "#3e3e3e"), ("pressed", "#4e4e4e")],
+            foreground=[("active", "white")]
+        )
+
+        # Accent Button (The Primary Action)
+        style.configure("Accent.TButton", 
+            background=THEME_COLOR, 
+            foreground="white",
+            font=("Segoe UI", 10, "bold")
+        )
+        style.map("Accent.TButton", 
+            background=[("active", THEME_COLOR_HOVER), ("pressed", THEME_COLOR_ACTIVE)]
+        )
+
+        # TEntry / Combobox
+        style.configure("TEntry", fieldbackground=SURFACE_COLOR, foreground=FG_COLOR, padding=5)
+        style.configure("TCombobox", fieldbackground=SURFACE_COLOR, background=SURFACE_COLOR, foreground=FG_COLOR, arrowcolor="white")
+        style.map("TCombobox", fieldbackground=[("readonly", SURFACE_COLOR)], selectbackground=[("readonly", THEME_COLOR)])
+
+        # Treeview
+        style.configure("Treeview", 
+            background=SURFACE_COLOR, 
+            fieldbackground=SURFACE_COLOR, 
+            foreground=FG_COLOR,
+            borderwidth=0,
+            rowheight=30,
+            font=("Segoe UI", 10)
+        )
+        style.map("Treeview", background=[("selected", THEME_COLOR)], foreground=[("selected", "white")])
+        
+        style.configure("Treeview.Heading", 
+            background=BG_COLOR, 
+            foreground="gray", 
+            font=("Segoe UI", 9, "bold"),
+            relief="flat"
+        )
+        style.map("Treeview.Heading", background=[("active", BG_COLOR)])
+
+        # Separator
+        style.configure("TSeparator", background="#3e3e3e")
+
+        # Checkbutton
+        style.configure("TCheckbutton", background=BG_COLOR, foreground=FG_COLOR)
+        style.map("TCheckbutton", background=[("active", BG_COLOR)], indicatorcolor=[("selected", THEME_COLOR)])
+
+        # Labelframe
+        style.configure("TLabelframe", background=BG_COLOR, foreground=FG_COLOR, bordercolor="#3e3e3e")
+        style.configure("TLabelframe.Label", background=BG_COLOR, foreground=THEME_COLOR)
+
+        # Scrollbar (Vertical)
+        style.configure("Vertical.TScrollbar", 
+            gripcount=0,
+            background=SURFACE_COLOR,
+            darkcolor=BG_COLOR,
+            lightcolor=BG_COLOR,
+            troughcolor=BG_COLOR,
+            bordercolor=BG_COLOR,
+            arrowcolor="white"
+        )
+        style.map("Vertical.TScrollbar", background=[("active", "#4e4e4e")])
 
     def build_ui(self):
         # --- Main Layout (Sidebar + Content) ---
         self.main_container = ttk.Frame(self)
         self.main_container.pack(fill="both", expand=True)
 
-        # 1. Sidebar (Left) - Fixed width
-        self.sidebar = ttk.Frame(self.main_container, width=240, padding=0)
+        # 1. Sidebar (Left)
+        # Use a slightly different color or just BG_COLOR
+        self.sidebar = ttk.Frame(self.main_container, width=240, style="TFrame")
         self.sidebar.pack(side="left", fill="y")
-        self.sidebar.pack_propagate(False) # Force width
+        self.sidebar.pack_propagate(False) 
         
-        # Sidebar Header (Logo)
+        # Sidebar Header
         self.sidebar_header = ttk.Frame(self.sidebar, padding=20)
         self.sidebar_header.pack(fill="x")
-        ttk.Label(self.sidebar_header, text="📜 BiplobOCR", font=("Segoe UI Variable Display", 18, "bold"), foreground="#e04f5f").pack(anchor="w")
-        ttk.Label(self.sidebar_header, text="v1.2.4 • Windows Edition", font=("Segoe UI", 8), foreground="gray").pack(anchor="w")
+        ttk.Label(self.sidebar_header, text="📜 BiplobOCR", style="Header.TLabel", font=("Segoe UI Variable Display", 18, "bold"), foreground=THEME_COLOR).pack(anchor="w")
+        ttk.Label(self.sidebar_header, text="Version 2.2", font=("Segoe UI", 8), foreground="gray").pack(anchor="w")
 
         # Sidebar Nav
         self.nav_frame = ttk.Frame(self.sidebar, padding=(10, 20))
@@ -84,10 +189,10 @@ class BiplobOCR(tk.Tk):
         self.btn_settings = self.create_nav_btn("⚙️ Settings", "settings", parent=self.footer_frame)
         ttk.Label(self.footer_frame, text="Help & Support", foreground="gray", cursor="hand2").pack(anchor="w", pady=(10, 0))
 
-        # Separator
-        ttk.Separator(self.main_container, orient="vertical").pack(side="left", fill="y")
+        # Separator (Manual line for cleaner look)
+        tk.Frame(self.main_container, bg="#333333", width=1).pack(side="left", fill="y")
 
-        # 2. Content Area (Right)
+        # 2. Content Area
         self.content_area = ttk.Frame(self.main_container)
         self.content_area.pack(side="left", fill="both", expand=True)
         
@@ -96,7 +201,7 @@ class BiplobOCR(tk.Tk):
         self.view_scan = ttk.Frame(self.content_area) 
         self.view_settings = ttk.Frame(self.content_area, padding=40)
         self.view_history = ttk.Frame(self.content_area, padding=40)
-        self.view_batch = ttk.Frame(self.content_area, padding=40) # Placeholder
+        self.view_batch = ttk.Frame(self.content_area, padding=40)
 
         self.build_home_view()
         self.build_scan_view()
@@ -113,18 +218,17 @@ class BiplobOCR(tk.Tk):
         return btn
 
     def switch_tab(self, tab):
-        # Hide all
         for v in [self.view_home, self.view_scan, self.view_settings, self.view_history, self.view_batch]:
             v.pack_forget()
         
-        # Reset NAV styles (simple toggle simulation)
         for b in [self.btn_home, self.btn_tools, self.btn_batch, self.btn_history, self.btn_settings]:
-            b.state(['!pressed', '!disabled']) # Reset state if needed or style
+            b.state(['!pressed', '!disabled']) 
             b.configure(style="TButton")
 
         if tab == "home":
             self.view_home.pack(fill="both", expand=True)
             self.btn_home.configure(style="Accent.TButton")
+            self.refresh_recent_docs() 
         elif tab == "scan":
             self.view_scan.pack(fill="both", expand=True)
             self.btn_tools.configure(style="Accent.TButton")
@@ -134,71 +238,92 @@ class BiplobOCR(tk.Tk):
         elif tab == "history":
             self.view_history.pack(fill="both", expand=True)
             self.btn_history.configure(style="Accent.TButton")
+            self.refresh_history_view()
         elif tab == "settings":
             self.view_settings.pack(fill="both", expand=True)
             self.btn_settings.configure(style="Accent.TButton")
 
     def build_home_view(self):
-        # Header
-        ttk.Label(self.view_home, text="Welcome to BiplobOCR", font=("Segoe UI Variable Display", 28, "bold")).pack(anchor="w")
+        ttk.Label(self.view_home, text="Welcome to BiplobOCR", style="Header.TLabel").pack(anchor="w")
         ttk.Label(self.view_home, text="Ready to digitize your documents? Start a new scan or pick up where you left off.", font=("Segoe UI", 12), foreground="gray").pack(anchor="w", pady=(5, 30))
         
-        # Cards Container
         cards_frame = ttk.Frame(self.view_home)
         cards_frame.pack(fill="x", pady=20)
         
-        # Card 1: Start New Task (The "Dashed" Box lookalike)
+        # Start Card
         card1 = ttk.Frame(cards_frame, style="Card.TFrame", padding=2)
         card1.pack(side="left", fill="both", expand=True, padx=(0, 10))
         
-        # Inner content of Card 1
-        c1_inner = ttk.Frame(card1, padding=30)
+        # Colorize border manually through framing if needed, but simple bg is ok
+        c1_inner = ttk.Frame(card1, padding=30, style="Card.TFrame")
         c1_inner.pack(fill="both", expand=True)
         
-        ttk.Label(c1_inner, text="⬆️", font=("Segoe UI", 24)).pack(pady=(0,10))
-        ttk.Label(c1_inner, text="Start a new OCR task", font=("Segoe UI", 16, "bold")).pack()
-        ttk.Label(c1_inner, text="Drag and drop PDF, JPG files here", foreground="gray").pack(pady=5)
+        ttk.Label(c1_inner, text="📂", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
+        ttk.Label(c1_inner, text="Start a new OCR task", font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
+        ttk.Label(c1_inner, text="Securely process PDF, JPG, PNG", foreground="gray", background=SURFACE_COLOR).pack(pady=5)
         
         ttk.Button(c1_inner, text="Select from Computer", style="Accent.TButton", command=self.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
         
-        # Card 2: Batch Process (Simpler)
+        # Batch Card
         card2 = ttk.Frame(cards_frame, style="Card.TFrame", padding=2)
         card2.pack(side="left", fill="both", expand=True, padx=(10, 0))
         
-        c2_inner = ttk.Frame(card2, padding=30)
+        c2_inner = ttk.Frame(card2, padding=30, style="Card.TFrame")
         c2_inner.pack(fill="both", expand=True)
         
-        ttk.Label(c2_inner, text="📑", font=("Segoe UI", 24)).pack(pady=(0,10))
-        ttk.Label(c2_inner, text="Batch Process", font=("Segoe UI", 16, "bold")).pack()
-        ttk.Label(c2_inner, text="Convert multiple files at once", foreground="gray").pack(pady=5)
+        ttk.Label(c2_inner, text="📦", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
+        ttk.Label(c2_inner, text="Batch Process", font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
         ttk.Button(c2_inner, text="Open Batch Tool", command=lambda: self.switch_tab("batch")).pack(pady=20)
 
-        # Recent Documents Section
-        ttk.Label(self.view_home, text="Recent Documents", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
+        # Recent Documents (Home)
+        ttk.Label(self.view_home, text="Recent Activity", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
         
-        # Treeview for Table
-        cols = ("Filename", "Date", "Size", "Status")
-        self.tree = ttk.Treeview(self.view_home, columns=cols, show="headings", height=8)
-        self.tree.pack(fill="both", expand=True)
+        cols = ("Filename", "Date", "Status")
+        self.tree_recent = ttk.Treeview(self.view_home, columns=cols, show="headings", height=6)
+        self.tree_recent.pack(fill="both", expand=True)
         
-        self.tree.heading("Filename", text="Filename")
-        self.tree.heading("Date", text="Date")
-        self.tree.heading("Size", text="Size")
-        self.tree.heading("Status", text="Status")
+        self.tree_recent.heading("Filename", text="Filename")
+        self.tree_recent.heading("Date", text="Date")
+        self.tree_recent.heading("Status", text="Status")
         
-        self.tree.column("Filename", width=300)
-        self.tree.column("Date", width=150)
-        self.tree.column("Size", width=100)
-        self.tree.column("Status", width=100)
+        self.tree_recent.column("Filename", width=300)
+        self.tree_recent.column("Date", width=150)
+        self.tree_recent.column("Status", width=100)
         
-        # Dummy Data
-        self.tree.insert("", "end", values=("Invoice_Q4_2023.pdf", "Today, 10:23 AM", "2.4 MB", "Completed"))
-        self.tree.insert("", "end", values=("Scan_Contract_002.png", "Yesterday", "4.1 MB", "Processing"))
-        self.tree.insert("", "end", values=("Meeting_Notes_Oct.pdf", "Oct 20, 2023", "0.8 MB", "Failed"))
+        self.refresh_recent_docs()
+
+    def refresh_recent_docs(self):
+        # Clear
+        for item in self.tree_recent.get_children():
+            self.tree_recent.delete(item)
+        
+        # Load from history
+        data = history.get_all()
+        for i, item in enumerate(data):
+            if i >= 5: break # Only show top 5
+            self.tree_recent.insert("", "end", values=(item["filename"], item["date"], item["status"]))
 
     def build_history_view(self):
-        ttk.Label(self.view_history, text="History Logs", font=("Segoe UI", 20, "bold")).pack(anchor="w", pady=20)
-        ttk.Label(self.view_history, text="Shows past processing attempts.").pack(anchor="w")
+        ttk.Label(self.view_history, text="History Logs", style="Header.TLabel").pack(anchor="w", pady=20)
+        
+        cols = ("Filename", "Date", "Size", "Status")
+        self.tree_history = ttk.Treeview(self.view_history, columns=cols, show="headings")
+        self.tree_history.pack(fill="both", expand=True)
+        
+        self.tree_history.heading("Filename", text="Filename")
+        self.tree_history.heading("Date", text="Date")
+        self.tree_history.heading("Size", text="Size")
+        self.tree_history.heading("Status", text="Status")
+        
+        self.refresh_history_view()
+
+    def refresh_history_view(self):
+        for item in self.tree_history.get_children():
+            self.tree_history.delete(item)
+            
+        data = history.get_all()
+        for item in data:
+            self.tree_history.insert("", "end", values=(item["filename"], item["date"], item["size"], item["status"]))
 
     def open_pdf_from_home(self):
         self.switch_tab("scan")
@@ -214,7 +339,7 @@ class BiplobOCR(tk.Tk):
         self.scan_paned.add(self.scan_sidebar, weight=0)
         
         # Header
-        ttk.Label(self.scan_sidebar, text="Active Task", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(0, 20))
+        ttk.Label(self.scan_sidebar, text="Active Task", font=("Segoe UI", 14, "bold"), foreground=THEME_COLOR).pack(anchor="w", pady=(0, 20))
         
         ttk.Button(self.scan_sidebar, text="📂 Open New PDF", command=self.open_pdf).pack(fill="x", pady=2)
         
@@ -242,7 +367,7 @@ class BiplobOCR(tk.Tk):
         # Status
         self.lbl_status = ttk.Label(self.scan_sidebar, text=app_state.t("lbl_status_idle"), foreground="gray", wraplength=250)
         self.lbl_status.pack(anchor="w", pady=5)
-        self.progress = ttk.Progressbar(self.scan_sidebar, mode="indeterminate")
+        self.progress = ttk.Progressbar(self.scan_sidebar, mode="indeterminate", style="Horizontal.TProgressbar")
         self.progress.pack(fill="x")
 
         # Viewer Area
@@ -270,23 +395,24 @@ class BiplobOCR(tk.Tk):
         cb_lang.pack(fill="x", pady=(5, 10))
         cb_lang.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
 
-        ttk.Label(f, text=app_state.t("lbl_theme")).pack(anchor="w")
-        self.var_theme = tk.StringVar(value=app_state.get("theme", "system"))
-        cb_theme = ttk.Combobox(f, textvariable=self.var_theme, values=["system", "dark", "light"], state="readonly")
-        cb_theme.pack(fill="x", pady=(5, 10))
-        cb_theme.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
+        # No theme switcher needed really if we enforced it, but keeps persistence logic
+        # ttk.Label(f, text=app_state.t("lbl_theme")).pack(anchor="w")
+        # .. removed theme toggle since we are strict on company branding ..
 
         ttk.Label(self.view_settings, text="Changes require restart to fully apply UI text translations.", foreground="gray").pack(pady=20)
         
     def save_settings_inline(self):
+        old_lang = app_state.get("language")
+        new_lang = self.var_lang.get()
+        
         new_conf = {
-            "language": self.var_lang.get(),
-            "theme": self.var_theme.get()
+            "language": new_lang,
+            "theme": "dark" # Enforce dark
         }
         app_state.save_config(new_conf)
-        # Apply theme immediately if possible
-        if self.var_theme.get() != "system":
-            if sv_ttk: sv_ttk.set_theme(self.var_theme.get())
+
+        if old_lang != new_lang:
+            messagebox.showinfo("Restart Required", "Applications language changed. Please restart BiplobOCR for changes to take effect.")
 
     # --- Actions ---
     def open_pdf(self):
@@ -311,12 +437,13 @@ class BiplobOCR(tk.Tk):
         self.lbl_status.config(text=f"Loaded: {os.path.basename(pdf)}")
 
     def start_processing_thread(self):
+        # Save current options to state
         app_state.set_option("deskew", self.var_deskew.get())
         app_state.set_option("clean", self.var_clean.get())
         app_state.set_option("rotate", self.var_rotate.get())
         app_state.set_option("force", self.var_force.get())
         app_state.set_option("optimize", self.var_optimize.get())
-        app_state.save_config({})
+        app_state.save_config({}) # Persist to disk
 
         self.btn_process.config(state="disabled")
         self.progress.start(10)
@@ -356,6 +483,11 @@ class BiplobOCR(tk.Tk):
         self.progress.stop()
         self.btn_process.config(state="normal")
         self.lbl_status.config(text="Failed.")
+        
+        # Log failure
+        fname = os.path.basename(self.current_pdf_path) if self.current_pdf_path else "Unknown"
+        history.add_entry(fname, "Failed")
+        
         messagebox.showerror("Error", msg)
 
     def ask_force_continuation(self):
@@ -372,6 +504,12 @@ class BiplobOCR(tk.Tk):
         self.btn_process.config(state="normal")
         self.lbl_status.config(text=app_state.t("lbl_status_done"))
         
+        # Log success
+        fname = os.path.basename(self.current_pdf_path)
+        # Get size
+        size_mb = os.path.getsize(temp_out) / (1024*1024)
+        history.add_entry(fname, "Completed", f"{size_mb:.1f} MB")
+        
         self.show_success_ui(temp_out, sidecar)
 
     def show_success_ui(self, temp_out, sidecar):
@@ -380,10 +518,10 @@ class BiplobOCR(tk.Tk):
         for c in self.success_frame.winfo_children(): c.destroy()
         
         # Center
-        c = ttk.Frame(self.success_frame)
+        c = ttk.Frame(self.success_frame, style="Card.TFrame")
         c.place(relx=0.5, rely=0.5, anchor="center")
         
-        ttk.Label(c, text="✅ " + app_state.t("msg_success"), font=("Segoe UI", 24)).pack(pady=10)
+        ttk.Label(c, text="✅ " + app_state.t("msg_success"), font=("Segoe UI", 24), background=SURFACE_COLOR).pack(pady=10)
         
         def save_pdf():
             f = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])
