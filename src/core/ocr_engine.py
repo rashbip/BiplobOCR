@@ -53,22 +53,35 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
     # Add verbose logging to catch page numbers
     cmd.append("-v")
     
-    # CPU Management: Leave at least 2 cores free or use 50%
-    # Tesseract 5 is very aggressive. We limit jobs (parallel pages) AND per-job threads.
-    try:
-        cpu_count = os.cpu_count() or 2
-        # Use roughly 75% of cores for jobs, but ensure at least 1 left for UI
-        safe_jobs = max(1, cpu_count - 1)
-        if cpu_count > 4: safe_jobs = cpu_count - 2
-        
-        cmd.extend(["--jobs", str(safe_jobs)])
-    except:
-        pass
-
-    # Environment variables to limit Tesseract internal threading
-    # This prevents each job from spawning max threads
+    # Custom Thread/Job Control
+    # 1. Thread Limit (Internal Tesseract threads per page)
+    # We keep this low (1) to prevent CPU hogging unless GPU is enabled (maybe allow 2?)
     env = os.environ.copy()
-    env["OMP_THREAD_LIMIT"] = "1"
+    env["OMP_THREAD_LIMIT"] = "1" 
+
+    # 2. Job Limit (Parallel pages processed)
+    # Controlled by user setting "Max CPU Threads"
+    safe_jobs = 1
+    if options:
+        # User defined max threads
+        user_max = options.get("max_cpu_threads", 2)
+        safe_jobs = max(1, int(user_max))
+        
+        # If GPU is enabled, we might allow slightly more parallelism if we trust the GPU
+        if options.get("use_gpu"):
+            # Tesseract GPU support is tricky. If user enabled it, we assume they want speed.
+            # But we still respect the limit to avoid freezing.
+            pass
+            
+    cmd.extend(["--jobs", str(safe_jobs)])
+    
+    # GPU OpenCL override? 
+    # Tesseract might auto-detect. We can't easily force specific device via CLI args 
+    # without config vars, but we can set env vars if known.
+    if options.get("gpu_device") and options.get("gpu_device") != "Auto":
+        # Attempt to hint device (Experimental)
+        # This part depends heavily on Tesseract build.
+        pass
 
     startupinfo = None
     if os.name == 'nt': 

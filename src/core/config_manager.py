@@ -13,7 +13,9 @@ DEFAULT_CONFIG = {
     "rotate": True,
     "force": False,
     "optimize": "0",
-    "use_gpu": False
+    "use_gpu": False,
+    "gpu_device": "Auto",
+    "max_cpu_threads": 2
 }
 
 TRANSLATIONS = {
