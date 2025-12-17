@@ -30,7 +30,7 @@ class BiplobOCR(tk.Tk):
         
         self.title(app_state.t("app_title"))
         self.geometry("1400x900") 
-        self.minsize(1000, 700)
+        self.minsize(1100, 750) # Increased to prevent clipping
         self.configure(bg=BG_COLOR)
         
         # Flags
@@ -135,15 +135,15 @@ class BiplobOCR(tk.Tk):
         self.nav_frame = ttk.Frame(self.sidebar, padding=(10, 20))
         self.nav_frame.pack(fill="x", expand=True, anchor="n")
         
-        self.btn_home = self.create_nav_btn("🏠 Home", "home")
-        self.btn_tools = self.create_nav_btn("🛠 Tools", "scan")
-        self.btn_batch = self.create_nav_btn("📂 Batch Process", "batch")
-        self.btn_history = self.create_nav_btn("🕒 History", "history")
+        self.btn_home = self.create_nav_btn(app_state.t("nav_home"), "home")
+        self.btn_tools = self.create_nav_btn(app_state.t("nav_tools"), "scan")
+        self.btn_batch = self.create_nav_btn(app_state.t("nav_batch"), "batch")
+        self.btn_history = self.create_nav_btn(app_state.t("nav_history"), "history")
 
         self.footer_frame = ttk.Frame(self.sidebar, padding=20)
         self.footer_frame.pack(side="bottom", fill="x")
-        self.btn_settings = self.create_nav_btn("⚙️ Settings", "settings", parent=self.footer_frame)
-        ttk.Label(self.footer_frame, text="Help & Support", foreground="gray", cursor="hand2").pack(anchor="w", pady=(10, 0))
+        self.btn_settings = self.create_nav_btn(app_state.t("nav_settings"), "settings", parent=self.footer_frame)
+        ttk.Label(self.footer_frame, text=app_state.t("lbl_help"), foreground="gray", cursor="hand2").pack(anchor="w", pady=(10, 0))
 
         tk.Frame(self.main_container, bg="#333333", width=1).pack(side="left", fill="y")
 
@@ -222,38 +222,67 @@ class BiplobOCR(tk.Tk):
             self.view_settings.pack(fill="both", expand=True)
             self.btn_settings.configure(style="Accent.TButton")
 
-    # --- PROCESS CONTROL ---
     def show_global_status(self, msg, determinate=False):
         self.processing_active = True
-        self.status_bar.pack(side="bottom", fill="x")
-        self.lbl_global_status.config(text=msg)
-        if determinate:
-            self.global_progress.config(mode="determinate", value=0)
-        else:
-            self.global_progress.config(mode="indeterminate")
-            self.global_progress.start(10)
+        try:
+            self.status_bar.pack(side="bottom", fill="x")
+            self.lbl_global_status.config(text=msg)
+            if determinate:
+                self.global_progress.config(mode="determinate", value=0)
+            else:
+                self.global_progress.config(mode="indeterminate")
+                self.global_progress.start(10)
+        except: pass
 
     def hide_global_status(self):
         self.processing_active = False
-        self.global_progress.stop()
-        self.status_bar.pack_forget()
+        try:
+            self.global_progress.stop()
+        except: pass
+        try:
+            self.status_bar.pack_forget()
+        except: pass
 
     def update_global_progress(self, val, max_val):
-        self.global_progress.config(mode="determinate", maximum=max_val, value=val)
+        try:
+            self.global_progress.config(mode="determinate", maximum=max_val, value=val)
+        except: pass
 
     def cancel_processing(self):
         self.stop_processing_flag = True
         cancel_ocr()
-        self.lbl_global_status.config(text="Stopping...")
+        try:
+            self.lbl_global_status.config(text="Stopping...")
+        except: pass
 
     def update_global_status_detail(self, val, page, total):
-        self.global_progress["value"] = val
-        self.lbl_global_status.config(text=f"Processing Page {page} of {total} ({int(val)}%)")
+        try:
+            self.global_progress["value"] = val
+            self.lbl_global_status.config(text=f"Processing Page {page} of {total} ({int(val)}%)")
+        except: pass
 
     # --- SINGLE SCAN ---
     def start_processing_thread(self): 
-        self.save_settings_inline() # Save all vars logic
+        self.save_settings_inline() 
         
+        # PRE-CHECK: Detect potential issues before starting
+        if not self.var_force.get() and self.current_pdf_path:
+            # We check if file has text
+            pdf_type = detect_pdf_type(self.current_pdf_path)
+            if pdf_type in ['text', 'mixed']:
+                msg = app_state.t("msg_text_detected") if app_state.get("language") == "en" else "File contains text."
+                msg += "\n\n" + ("Enable 'Force OCR' to re-process?" if app_state.get("language") == "en" else "Force OCR enabled?")
+                
+                # Ask: Yes = Force, No = Cancel or Proceed?
+                # User wants "ask at first... if ok continue". 
+                if messagebox.askyesno("Text Detected", msg):
+                    self.var_force.set(True)
+                else:
+                    # If they say No, we proceed with force=False (Skip Text mode)
+                    # But if they meant "Cancel", they should hit Stop or we should offer Cancel.
+                    # Standard logic: No means "Don't force", so we try standard (skip/mix).
+                    pass
+
         self.btn_process.config(state="disabled")
         self.stop_processing_flag = False
         self.show_global_status(app_state.t("lbl_status_processing"))
@@ -306,12 +335,11 @@ class BiplobOCR(tk.Tk):
             self.after(0, lambda: self.on_process_success(temp_out, sidecar))
             
         except subprocess.CalledProcessError as e:
-            err_text = str(e.stderr).lower() if e.stderr else ""
-            if "priorocrfounderror" in err_text or "page already has text" in err_text:
-                self.after(0, lambda: self.ask_force_continuation())
-            else:
-                err_msg = str(e.stderr)
-                self.after(0, lambda: self.on_process_fail(err_msg))
+            # We NO LONGER re-ask here. We just report failure.
+            # If the user didn't force, and it failed, they know why (we warned them or they turned it off).
+            err_msg = str(e.stderr) if e.stderr else str(e)
+            self.after(0, lambda: self.on_process_fail(err_msg))
+            
         except Exception as e:
             err_msg = str(e)
             if "Process Cancelled" in err_msg:
@@ -489,19 +517,19 @@ class BiplobOCR(tk.Tk):
         lbl.pack(anchor="w", pady=(0, 20))
         
         # Hardware Config
-        f_hw = ttk.LabelFrame(self.view_settings, text="Performance & Hardware", padding=20)
+        f_hw = ttk.LabelFrame(self.view_settings, text=app_state.t("lbl_hw_settings"), padding=20)
         f_hw.pack(fill="x", pady=10)
         
         # GPU Selection
-        ttk.Label(f_hw, text="Primary Processing Device (GPU/CPU):").pack(anchor="w")
+        ttk.Label(f_hw, text=app_state.t("lbl_dev_select")).pack(anchor="w")
         gpu_vals = ["Auto"] + self.available_gpus
         cb_gpu = ttk.Combobox(f_hw, textvariable=self.var_gpu_device, values=gpu_vals, state="readonly")
         cb_gpu.pack(fill="x", pady=(5, 10))
         
-        ttk.Checkbutton(f_hw, text="Enable GPU Acceleration (Safe Mode)", variable=self.var_gpu).pack(anchor="w")
+        ttk.Checkbutton(f_hw, text=app_state.t("lbl_gpu"), variable=self.var_gpu).pack(anchor="w")
         
         # Threads
-        ttk.Label(f_hw, text=f"Max CPU Threads (Total Cores: {self.cpu_count})").pack(anchor="w", pady=(10,0))
+        ttk.Label(f_hw, text=f"{app_state.t('lbl_threads')} (Total Cores: {self.cpu_count})").pack(anchor="w", pady=(10,0))
         ttk.Label(f_hw, text="Lower this value if your PC freezes.", foreground="gray", font=("Segoe UI", 8)).pack(anchor="w")
         
         # Scale for threads
@@ -509,7 +537,7 @@ class BiplobOCR(tk.Tk):
         s_threads.pack(fill="x", pady=5)
         
         # Lang
-        f_lang = ttk.LabelFrame(self.view_settings, text="General", padding=20)
+        f_lang = ttk.LabelFrame(self.view_settings, text=app_state.t("lbl_lang"), padding=20)
         f_lang.pack(fill="x", pady=10)
         ttk.Label(f_lang, text=app_state.t("lbl_lang")).pack(anchor="w")
         cb_lang = ttk.Combobox(f_lang, textvariable=self.var_lang, values=["en", "bn"], state="readonly")
@@ -531,7 +559,7 @@ class BiplobOCR(tk.Tk):
             "max_cpu_threads": self.var_cpu_threads.get()
         }
         app_state.save_config(new_conf)
-        if old_lang != new_lang: messagebox.showinfo("Restart", "Restart required for language change.")
+        if old_lang != new_lang: messagebox.showinfo("Restart", app_state.t("msg_restart"))
 
     # --- Actions ---
     def open_pdf(self):
@@ -549,13 +577,6 @@ class BiplobOCR(tk.Tk):
         self.btn_process.config(state="normal")
         self.success_frame.place_forget()
         self.lbl_status.config(text=f"Loaded: {os.path.basename(pdf)}")
-
-    def ask_force_continuation(self):
-        proceed = messagebox.askyesno("Text Detected", "Force OCR?")
-        if proceed:
-            self.var_force.set(True)
-            self.start_processing_thread()
-        else: self.on_process_fail("Aborted.")
 
     def show_success_ui(self, temp_out, sidecar):
         self.success_frame.place(relx=0, rely=0, relwidth=1, relheight=1)

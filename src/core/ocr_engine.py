@@ -1,149 +1,171 @@
 
 import subprocess
-import shutil
 import os
 import signal
-import time
 import re
+import shutil
+import tempfile
+import sys
+from .constants import APP_NAME, TEMP_DIR
 
 # Store active process for cancellation
 ACTIVE_PROCESS = None
+
+def detect_pdf_type(file_path):
+    """
+    Check if PDF is text-based (Digital) or scanned images.
+    Returns: 'text', 'image', or 'mixed'
+    """
+    try:
+        # pip install pymupdf
+        import fitz 
+        doc = fitz.open(file_path)
+        
+        has_text = False
+        has_images = False
+        
+        for page in doc:
+            if page.get_text().strip():
+                has_text = True
+            if page.get_images():
+                has_images = True
+                
+        doc.close()
+        
+        if has_text and not has_images: return 'text'
+        if has_images and not has_text: return 'image'
+        return 'mixed'
+        
+    except ImportError:
+        return 'unknown' # Fallback if pymupdf missing
+    except:
+        return 'unknown'
+
+def run_tesseract_export(pdf_path, output_txt):
+    """
+    Running tesseract directly just to extract text is complex for PDFs.
+    Better used for Images. For PDFs, we rely on ocrmypdf sidecar.
+    """
+    pass
 
 def cancel_ocr():
     global ACTIVE_PROCESS
     if ACTIVE_PROCESS:
         try:
-            pid = ACTIVE_PROCESS.pid
+            print(f"Terminating process: {ACTIVE_PROCESS.pid}")
+            
+            # Kill the entire process tree to ensure Tesseract/Ghostscript also die
             if os.name == 'nt':
-                # Force kill process tree (including Tesseract/Ghostscript)
-                subprocess.call(['taskkill', '/F', '/T', '/PID', str(pid)], 
-                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # Windows: /F (Force) /T (Tree) /PID
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(ACTIVE_PROCESS.pid)], 
+                               creationflags=subprocess.CREATE_NO_WINDOW)
             else:
-                os.killpg(os.getpgid(pid), signal.SIGTERM)
-        except:
-            pass
-        ACTIVE_PROCESS = None
-
-def detect_pdf_type(pdf_path):
-    return "image"
+                # Unix: Kill progress group
+                os.killpg(os.getpgid(ACTIVE_PROCESS.pid), signal.SIGTERM)
+                
+            ACTIVE_PROCESS = None
+        except Exception as e:
+            print(f"Error killing process: {e}")
 
 def run_ocr(input_path, output_path, password=None, force=False, options=None, progress_callback=None):
+    """
+    Executes OCRmyPDF on the input file.
+    Retries on CPU if GPU fails.
+    """
     global ACTIVE_PROCESS
     
-    cmd = ["ocrmypdf", input_path, output_path]
-    
-    if force:
-        cmd.append("--force-ocr")
-    else:
-        cmd.append("--skip-text")
+    # 1. Prepare Base CMD
+    base_cmd = ["ocrmypdf"]
+    if force: base_cmd.append("--force-ocr")
+    else: base_cmd.append("--skip-text")
 
     if options:
-        if options.get("deskew"): cmd.append("--deskew")
-        if options.get("clean"): cmd.append("--clean")
-        if options.get("rotate"): cmd.append("--rotate-pages")
-        
-        opt_level = options.get("optimize", "0")
-        if opt_level != "0":
-            cmd.extend(["--optimize", opt_level])
+        if options.get("deskew"): base_cmd.append("--deskew")
+        if options.get("clean"): base_cmd.append("--clean")
+        if options.get("rotate"): base_cmd.append("--rotate-pages")
+        if options.get("optimize", "0") != "0": 
+            base_cmd.extend(["--optimize", options.get("optimize")])
 
-    # Sidecar generation
-    sidecar = output_path.replace(".pdf", ".txt")
-    cmd.extend(["--sidecar", sidecar])
-    
-    # Add verbose logging to catch page numbers
-    cmd.append("-v")
-    
-    # Custom Thread/Job Control
-    # 1. Thread Limit (Internal Tesseract threads per page)
-    # We keep this low (1) to prevent CPU hogging unless GPU is enabled (maybe allow 2?)
+    sidecar_file = output_path.replace(".pdf", ".txt")
+    base_cmd.extend(["--sidecar", sidecar_file])
+    base_cmd.append("-v")
+
+    # Thread/Job Control
     env = os.environ.copy()
-    env["OMP_THREAD_LIMIT"] = "1" 
-
-    # 2. Job Limit (Parallel pages processed)
-    # Controlled by user setting "Max CPU Threads"
     safe_jobs = 1
     if options:
-        # User defined max threads
-        user_max = options.get("max_cpu_threads", 2)
-        safe_jobs = max(1, int(user_max))
-        
-        # If GPU is enabled, we might allow slightly more parallelism if we trust the GPU
-        if options.get("use_gpu"):
-            # Tesseract GPU support is tricky. If user enabled it, we assume they want speed.
-            # But we still respect the limit to avoid freezing.
-            pass
-            
-    cmd.extend(["--jobs", str(safe_jobs)])
+        safe_jobs = max(1, int(options.get("max_cpu_threads", 2)))
     
-    # GPU OpenCL override? 
-    # Tesseract might auto-detect. We can't easily force specific device via CLI args 
-    # without config vars, but we can set env vars if known.
-    if options.get("gpu_device") and options.get("gpu_device") != "Auto":
-        # Attempt to hint device (Experimental)
-        # This part depends heavily on Tesseract build.
-        pass
+    env["OMP_THREAD_LIMIT"] = "1"
+    base_cmd.extend(["--jobs", str(safe_jobs)])
 
-    startupinfo = None
-    if os.name == 'nt': 
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    # GPU Setup
+    tess_cfg_path = None
+    use_gpu = options.get("use_gpu") if options else False
     
-    try:
-        ACTIVE_PROCESS = subprocess.Popen(
-            cmd, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE,
-            text=True,
-            startupinfo=startupinfo,
-            bufsize=1,
-            universal_newlines=True,
-            env=env
-        )
+    # Function to execute command
+    def execute_attempt(is_gpu_attempt):
+        nonlocal tess_cfg_path
+        cmd = list(base_cmd)
         
-        # Read stderr line by line for progress
+        if is_gpu_attempt:
+            try:
+                temp_dir = os.path.dirname(output_path) if os.path.dirname(output_path) else tempfile.gettempdir()
+                tess_cfg_path = os.path.join(temp_dir, "tess_gpu_config.cfg")
+                with open(tess_cfg_path, "w") as f:
+                    f.write("tessedit_enable_opencl 1\n")
+                cmd.extend(["--tesseract-config", tess_cfg_path])
+            except: 
+                pass # Fail silently, proceed with cmd
+        
+        cmd.extend([input_path, output_path])
+
+        startupinfo = None
+        if os.name == 'nt': 
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        
+        global ACTIVE_PROCESS
+        
+        if os.name == 'posix':
+            ACTIVE_PROCESS = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, start_new_session=True, bufsize=1, universal_newlines=True)
+        else:
+            ACTIVE_PROCESS = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, startupinfo=startupinfo, bufsize=1, universal_newlines=True)
+
+        stderr_output = []
         while True:
-            # Check explicit cancellation first
-            if ACTIVE_PROCESS is None:
-                raise Exception("Process Cancelled")
-
             line = ACTIVE_PROCESS.stderr.readline()
-            if not line and ACTIVE_PROCESS.poll() is not None:
-                break
-            
+            if not line and ACTIVE_PROCESS.poll() is not None: break
             if line:
-                # Try to parse page number
-                match = re.search(r'(?:INFO\s+-\s+|Page\s+)(\d+)', line)
+                stderr_output.append(line)
+                match = re.search(r'(?:INFO\s+-\s+|Page\s+|Scanning page\s+)(\d+)', line, re.IGNORECASE)
                 if match and progress_callback:
-                    try:
-                        page_num = int(match.group(1))
-                        progress_callback(page_num)
-                    except:
-                        pass
+                    try: progress_callback(int(match.group(1)))
+                    except: pass
         
-        # Final check
-        if ACTIVE_PROCESS is None:
-             raise Exception("Process Cancelled")
-
-        return_code = ACTIVE_PROCESS.poll()
-        
-        if return_code != 0:
-            # If we killed it, return_code might be 1 or 255 or -term
-            # We assume if ACTIVE_PROCESS is None (cleared by cancel) it was cancelled
-            if ACTIVE_PROCESS is None: 
-                raise Exception("Process Cancelled")
-            
-            # Read any remaining stderr
-            rem_stderr = ACTIVE_PROCESS.stderr.read()
-            raise subprocess.CalledProcessError(return_code, cmd, output="", stderr=rem_stderr)
-            
-    except Exception as e:
-        if "Process Cancelled" in str(e):
-            raise e
-        raise e
-    finally:
+        rc = ACTIVE_PROCESS.poll()
+        out = ACTIVE_PROCESS.stdout.read()
+        err = "".join(stderr_output)
         ACTIVE_PROCESS = None
+        
+        if tess_cfg_path and os.path.exists(tess_cfg_path):
+            try: os.remove(tess_cfg_path)
+            except: pass
 
-    return sidecar
+        if rc != 0:
+            raise subprocess.CalledProcessError(rc, cmd, output=out, stderr=err)
 
-def run_tesseract_export(input_path, output_base, format="hocr"):
-    subprocess.check_call(["tesseract", input_path, output_base, format])
+    # Retry Logic
+    try:
+        execute_attempt(use_gpu)
+    except subprocess.CalledProcessError as e:
+        if use_gpu:
+            print("GPU failed. Retrying with CPU...")
+            try:
+                execute_attempt(False) # Retry without GPU
+            except subprocess.CalledProcessError as e2:
+                raise e2 # Fail for real
+        else:
+            raise e # Fail if CPU mode failed
+
+    return sidecar_file

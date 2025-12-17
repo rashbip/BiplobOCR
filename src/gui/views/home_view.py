@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from ...core.history_manager import history
 from ...core.theme import SURFACE_COLOR, THEME_COLOR
+from ...core.config_manager import state as app_state
 
 class HomeView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -10,8 +11,8 @@ class HomeView(ttk.Frame):
         self.build_ui()
 
     def build_ui(self):
-        ttk.Label(self, text="Welcome to BiplobOCR", style="Header.TLabel").pack(anchor="w")
-        ttk.Label(self, text="Ready to digitize your documents? Start a new scan or pick up where you left off.", font=("Segoe UI", 12), foreground="gray").pack(anchor="w", pady=(5, 30))
+        ttk.Label(self, text=app_state.t("home_welcome"), style="Header.TLabel").pack(anchor="w")
+        ttk.Label(self, text=app_state.t("home_desc"), font=("Segoe UI", 12), foreground="gray").pack(anchor="w", pady=(5, 30))
         
         cards_frame = ttk.Frame(self)
         cards_frame.pack(fill="x", pady=20)
@@ -22,9 +23,9 @@ class HomeView(ttk.Frame):
         c1_inner = ttk.Frame(card1, padding=30, style="Card.TFrame")
         c1_inner.pack(fill="both", expand=True)
         ttk.Label(c1_inner, text="📂", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
-        ttk.Label(c1_inner, text="Start a new OCR task", font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Label(c1_inner, text="Securely process PDF, JPG, PNG", foreground="gray", background=SURFACE_COLOR).pack(pady=5)
-        ttk.Button(c1_inner, text="Select from Computer", style="Accent.TButton", command=self.controller.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
+        ttk.Label(c1_inner, text=app_state.t("card_new_task"), font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
+        ttk.Label(c1_inner, text=app_state.t("card_new_desc"), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+        ttk.Button(c1_inner, text=app_state.t("btn_select_computer"), style="Accent.TButton", command=self.controller.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
         
         # Batch Card
         card2 = ttk.Frame(cards_frame, style="Card.TFrame", padding=2)
@@ -32,18 +33,18 @@ class HomeView(ttk.Frame):
         c2_inner = ttk.Frame(card2, padding=30, style="Card.TFrame")
         c2_inner.pack(fill="both", expand=True)
         ttk.Label(c2_inner, text="📦", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
-        ttk.Label(c2_inner, text="Batch Process", font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Button(c2_inner, text="Open Batch Tool", command=lambda: self.controller.switch_tab("batch")).pack(pady=20)
+        ttk.Label(c2_inner, text=app_state.t("batch_title"), font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
+        ttk.Button(c2_inner, text=app_state.t("btn_open_batch"), command=lambda: self.controller.switch_tab("batch")).pack(pady=20)
 
         # Recent Documents
-        ttk.Label(self, text="Recent Activity", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
+        ttk.Label(self, text=app_state.t("home_recent"), font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
         
         cols = ("Filename", "Date", "Status")
         self.tree_recent = ttk.Treeview(self, columns=cols, show="headings", height=6)
         self.tree_recent.pack(fill="both", expand=True)
-        self.tree_recent.heading("Filename", text="Filename")
-        self.tree_recent.heading("Date", text="Date")
-        self.tree_recent.heading("Status", text="Status")
+        self.tree_recent.heading("Filename", text=app_state.t("col_filename"))
+        self.tree_recent.heading("Date", text=app_state.t("col_date"))
+        self.tree_recent.heading("Status", text=app_state.t("col_status"))
         self.tree_recent.column("Filename", width=300)
         self.tree_recent.column("Date", width=150)
         self.tree_recent.column("Status", width=100)

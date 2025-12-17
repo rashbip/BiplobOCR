@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from ...core.history_manager import history
 from ...core.theme import SURFACE_COLOR
+from ...core.config_manager import state as app_state
 
 class HistoryView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -13,17 +14,17 @@ class HistoryView(ttk.Frame):
         header = ttk.Frame(self)
         header.pack(fill="x", pady=(0, 20))
         
-        ttk.Label(header, text="History Logs", style="Header.TLabel").pack(side="left")
-        ttk.Button(header, text="🗑 Clear All", command=self.confirm_clear_all, style="Danger.TButton").pack(side="right")
+        ttk.Label(header, text=app_state.t("nav_history"), style="Header.TLabel").pack(side="left")
+        ttk.Button(header, text=app_state.t("btn_clear_history"), command=self.confirm_clear_all, style="Danger.TButton").pack(side="right")
 
         cols = ("Filename", "Date", "Size", "Status")
         self.tree = ttk.Treeview(self, columns=cols, show="headings")
         self.tree.pack(fill="both", expand=True)
         
-        self.tree.heading("Filename", text="Filename")
-        self.tree.heading("Date", text="Date")
-        self.tree.heading("Size", text="Size")
-        self.tree.heading("Status", text="Status")
+        self.tree.heading("Filename", text=app_state.t("col_filename"))
+        self.tree.heading("Date", text=app_state.t("col_date"))
+        self.tree.heading("Size", text=app_state.t("col_size"))
+        self.tree.heading("Status", text=app_state.t("col_status"))
         
         self.tree.column("Filename", width=300)
         self.tree.column("Date", width=150)
