@@ -7,8 +7,8 @@
     "force": true,
     "optimize": "0",
     "use_gpu": true,
-    "gpu_device": "Auto",
-    "max_cpu_threads": 2,
+    "gpu_device": "AMD Radeon RX 580 2048SP",
+    "max_cpu_threads": 3,
     "ocr_options": {
         "deskew": false,
         "clean": false,

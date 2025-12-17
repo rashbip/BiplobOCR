@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+import time
 
 HISTORY_FILE = "history.json"
 
@@ -17,26 +17,33 @@ class HistoryManager:
                 return []
         return []
 
-    def add_entry(self, filename, status, size_str="0 MB"):
+    def save_history(self):
+        # Keep only last 50
+        if len(self.history) > 50:
+            self.history = self.history[:50]
+        with open(HISTORY_FILE, "w") as f:
+            json.dump(self.history, f, indent=4)
+
+    def add_entry(self, filename, status, size="N/A"):
         entry = {
             "filename": filename,
-            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "size": size_str,
+            "date": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "size": size,
             "status": status
         }
         self.history.insert(0, entry) # Prepend
         self.save_history()
 
-    def save_history(self):
-        # Keep only last 50
-        if len(self.history) > 50:
-            self.history = self.history[:50]
-            
-        with open(HISTORY_FILE, "w") as f:
-            json.dump(self.history, f, indent=4)
-
     def get_all(self):
         return self.history
 
-# Global instance
+    def delete_entry(self, index):
+        if 0 <= index < len(self.history):
+            del self.history[index]
+            self.save_history()
+
+    def clear_all(self):
+        self.history = []
+        self.save_history()
+
 history = HistoryManager()

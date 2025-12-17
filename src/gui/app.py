@@ -20,6 +20,7 @@ from .settings_dialog import SettingsDialog
 from ..core.theme import THEME_COLOR, THEME_COLOR_HOVER, THEME_COLOR_ACTIVE, BG_COLOR, SURFACE_COLOR, FG_COLOR
 from .views.home_view import HomeView
 from .views.batch_view import BatchView
+from .views.history_view import HistoryView
 from ..core import gpu_manager
 
 class BiplobOCR(tk.Tk):
@@ -179,14 +180,13 @@ class BiplobOCR(tk.Tk):
         # --- VIEWS ---
         self.view_home = HomeView(self.content_area, self)
         self.view_batch = BatchView(self.content_area, self)
+        self.view_history = HistoryView(self.content_area, self)
 
         self.view_scan = ttk.Frame(self.content_area) 
         self.view_settings = ttk.Frame(self.content_area, padding=40)
-        self.view_history = ttk.Frame(self.content_area, padding=40)
 
         self.build_scan_view()
         self.build_settings_view()
-        self.build_history_view()
 
         self.view_home.pack(fill="both", expand=True)
         self.switch_tab("home")
@@ -217,7 +217,7 @@ class BiplobOCR(tk.Tk):
         elif tab == "history":
             self.view_history.pack(fill="both", expand=True)
             self.btn_history.configure(style="Accent.TButton")
-            self.refresh_history_view()
+            self.view_history.refresh()
         elif tab == "settings":
             self.view_settings.pack(fill="both", expand=True)
             self.btn_settings.configure(style="Accent.TButton")
@@ -453,22 +453,6 @@ class BiplobOCR(tk.Tk):
             messagebox.showinfo("Batch Stopped", f"Processing Stopped.\nSuccessful: {success}")
         else:
             messagebox.showinfo("Batch Complete", f"Processed {total} files.\nSuccessful: {success}")
-
-    def build_history_view(self):
-        ttk.Label(self.view_history, text="History Logs", style="Header.TLabel").pack(anchor="w", pady=20)
-        cols = ("Filename", "Date", "Size", "Status")
-        self.tree_history = ttk.Treeview(self.view_history, columns=cols, show="headings")
-        self.tree_history.pack(fill="both", expand=True)
-        self.tree_history.heading("Filename", text="Filename")
-        self.tree_history.heading("Date", text="Date")
-        self.tree_history.heading("Size", text="Size")
-        self.tree_history.heading("Status", text="Status")
-        self.refresh_history_view()
-
-    def refresh_history_view(self):
-        for item in self.tree_history.get_children(): self.tree_history.delete(item)
-        data = history.get_all()
-        for item in data: self.tree_history.insert("", "end", values=(item["filename"], item["date"], item["size"], item["status"]))
 
     def open_pdf_from_home(self):
         self.switch_tab("scan")

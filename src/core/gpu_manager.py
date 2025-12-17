@@ -4,30 +4,36 @@ import os
 
 def get_available_gpus():
     """
-    Detects available GPUs on Windows using wmic.
-    Returns a list of strings, e.g. ['NVIDIA GeForce RTX 3060', 'Intel(R) UHD Graphics']
+    Detects available GPUs on Windows using PowerShell.
+    Returns a list of strings including CPU and GPUs.
     """
-    gpus = []
+    devices = ["CPU (Default)"]
     if os.name == 'nt':
         try:
-            cmd = ['wmic', 'path', 'win32_VideoController', 'get', 'name']
-            proc = subprocess.run(cmd, capture_output=True, text=True, shell=True) # shell=True might find wmic if it's a built-in alias
+            # PowerShell is often more reliable/cleaner than wmic for this
+            cmd = ["powershell", "-Command", "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"]
+            proc = subprocess.run(cmd, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            
             if proc.returncode == 0:
                 lines = proc.stdout.strip().split('\n')
-                # First line is header "Name", skip it
-                for line in lines[1:]:
+                for line in lines:
                     clean = line.strip()
-                    if clean:
-                        gpus.append(clean)
+                    if clean and clean not in devices:
+                        devices.append(clean)
         except Exception as e:
-            # Silently fail if wmic missing
-            pass
+            # Fallback to wmic if powershell fails
+            try:
+                cmd = ['wmic', 'path', 'win32_VideoController', 'get', 'name']
+                proc = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+                lines = proc.stdout.strip().split('\n')
+                for line in lines[1:]: # Skip header
+                    clean = line.strip()
+                    if clean and clean not in devices:
+                        devices.append(clean)
+            except: 
+                pass
             
-    # Add a fallback/simulated entry if none found
-    if not gpus:
-        gpus.append("Standard Graphics Adaptor")
-        
-    return gpus
+    return devices
 
 def get_system_info():
     """
