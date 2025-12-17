@@ -29,8 +29,8 @@ class BiplobOCR(tk.Tk):
         self.load_settings()
         
         self.title(app_state.t("app_title"))
-        self.geometry("1200x800")
-        self.minsize(900, 600)
+        self.geometry("1280x850")
+        self.minsize(1000, 700)
         
         self.current_pdf_path = None
         self.current_pdf_password = None
@@ -54,82 +54,152 @@ class BiplobOCR(tk.Tk):
                     sv_ttk.set_theme("light") 
 
     def build_ui(self):
-        # --- Main Layout (Nav Rail + Content) ---
+        # --- Main Layout (Sidebar + Content) ---
         self.main_container = ttk.Frame(self)
         self.main_container.pack(fill="both", expand=True)
 
-        # 1. Navigation Rail (Left)
-        self.nav_rail = ttk.Frame(self.main_container, padding=10, width=80)
-        self.nav_rail.pack(side="left", fill="y")
+        # 1. Sidebar (Left) - Fixed width
+        self.sidebar = ttk.Frame(self.main_container, width=240, padding=0)
+        self.sidebar.pack(side="left", fill="y")
+        self.sidebar.pack_propagate(False) # Force width
         
-        # App Icon / Title (Short)
-        ttk.Label(self.nav_rail, text="B", font=("Segoe UI", 30, "bold"), foreground="#007acc").pack(pady=20)
+        # Sidebar Header (Logo)
+        self.sidebar_header = ttk.Frame(self.sidebar, padding=20)
+        self.sidebar_header.pack(fill="x")
+        ttk.Label(self.sidebar_header, text="📜 BiplobOCR", font=("Segoe UI Variable Display", 18, "bold"), foreground="#e04f5f").pack(anchor="w")
+        ttk.Label(self.sidebar_header, text="v1.2.4 • Windows Edition", font=("Segoe UI", 8), foreground="gray").pack(anchor="w")
 
-        # Nav Buttons (Using Unicode Icons for simplicity)
-        self.btn_home = ttk.Button(self.nav_rail, text="🏠\nHome", command=lambda: self.switch_tab("home"), style="Accent.TButton", width=6)
-        self.btn_home.pack(pady=10)
-
-        self.btn_scan = ttk.Button(self.nav_rail, text="⚡\nOCR", command=lambda: self.switch_tab("scan"), width=6)
-        self.btn_scan.pack(pady=10)
+        # Sidebar Nav
+        self.nav_frame = ttk.Frame(self.sidebar, padding=(10, 20))
+        self.nav_frame.pack(fill="x", expand=True, anchor="n")
         
-        self.btn_settings = ttk.Button(self.nav_rail, text="⚙️\nSet...", command=lambda: self.switch_tab("settings"), width=6)
-        self.btn_settings.pack(side="bottom", pady=20)
+        self.btn_home = self.create_nav_btn("🏠 Home", "home")
+        self.btn_tools = self.create_nav_btn("🛠 Tools", "scan")
+        self.btn_batch = self.create_nav_btn("📂 Batch Process", "batch")
+        self.btn_history = self.create_nav_btn("🕒 History", "history")
+
+        # Sidebar Footer
+        self.footer_frame = ttk.Frame(self.sidebar, padding=20)
+        self.footer_frame.pack(side="bottom", fill="x")
+        self.btn_settings = self.create_nav_btn("⚙️ Settings", "settings", parent=self.footer_frame)
+        ttk.Label(self.footer_frame, text="Help & Support", foreground="gray", cursor="hand2").pack(anchor="w", pady=(10, 0))
 
         # Separator
         ttk.Separator(self.main_container, orient="vertical").pack(side="left", fill="y")
 
-        # 2. Content Stack (Right)
+        # 2. Content Area (Right)
         self.content_area = ttk.Frame(self.main_container)
         self.content_area.pack(side="left", fill="both", expand=True)
         
         # --- VIEWS ---
         self.view_home = ttk.Frame(self.content_area, padding=40)
-        self.view_scan = ttk.Frame(self.content_area) # Will hold PDF + Sidebar
-        self.view_settings = ttk.SettingsView(self.content_area) if hasattr(ttk, 'SettingsView') else ttk.Frame(self.content_area, padding=40) # Custom logic below
+        self.view_scan = ttk.Frame(self.content_area) 
+        self.view_settings = ttk.Frame(self.content_area, padding=40)
+        self.view_history = ttk.Frame(self.content_area, padding=40)
+        self.view_batch = ttk.Frame(self.content_area, padding=40) # Placeholder
 
-        # Build Home
         self.build_home_view()
-        
-        # Build Scan
         self.build_scan_view()
-        
-        # Build Settings
         self.build_settings_view()
+        self.build_history_view()
 
         # Init
         self.switch_tab("home")
     
+    def create_nav_btn(self, text, tab, parent=None):
+        if not parent: parent = self.nav_frame
+        btn = ttk.Button(parent, text=text, command=lambda: self.switch_tab(tab), style="TButton")
+        btn.pack(fill="x", pady=2, anchor="w")
+        return btn
+
     def switch_tab(self, tab):
         # Hide all
-        self.view_home.pack_forget()
-        self.view_scan.pack_forget()
-        self.view_settings.pack_forget()
+        for v in [self.view_home, self.view_scan, self.view_settings, self.view_history, self.view_batch]:
+            v.pack_forget()
         
-        # Reset styles
-        self.btn_home.configure(style="TButton")
-        self.btn_scan.configure(style="TButton")
-        self.btn_settings.configure(style="TButton")
+        # Reset NAV styles (simple toggle simulation)
+        for b in [self.btn_home, self.btn_tools, self.btn_batch, self.btn_history, self.btn_settings]:
+            b.state(['!pressed', '!disabled']) # Reset state if needed or style
+            b.configure(style="TButton")
 
         if tab == "home":
             self.view_home.pack(fill="both", expand=True)
             self.btn_home.configure(style="Accent.TButton")
         elif tab == "scan":
             self.view_scan.pack(fill="both", expand=True)
-            self.btn_scan.configure(style="Accent.TButton")
+            self.btn_tools.configure(style="Accent.TButton")
+        elif tab == "batch":
+            self.view_batch.pack(fill="both", expand=True)
+            self.btn_batch.configure(style="Accent.TButton")
+        elif tab == "history":
+            self.view_history.pack(fill="both", expand=True)
+            self.btn_history.configure(style="Accent.TButton")
         elif tab == "settings":
             self.view_settings.pack(fill="both", expand=True)
             self.btn_settings.configure(style="Accent.TButton")
 
     def build_home_view(self):
-        # Big hero section
-        ttk.Label(self.view_home, text=app_state.t("app_title"), font=("Segoe UI Variable Display", 32, "bold")).pack(pady=(50, 10))
-        ttk.Label(self.view_home, text="Professional PDF OCR Solution", font=("Segoe UI", 16), foreground="gray").pack(pady=(0, 40))
+        # Header
+        ttk.Label(self.view_home, text="Welcome to BiplobOCR", font=("Segoe UI Variable Display", 28, "bold")).pack(anchor="w")
+        ttk.Label(self.view_home, text="Ready to digitize your documents? Start a new scan or pick up where you left off.", font=("Segoe UI", 12), foreground="gray").pack(anchor="w", pady=(5, 30))
         
-        btn_frame = ttk.Frame(self.view_home)
-        btn_frame.pack()
+        # Cards Container
+        cards_frame = ttk.Frame(self.view_home)
+        cards_frame.pack(fill="x", pady=20)
         
-        ttk.Button(btn_frame, text="📂 Open PDF", style="Accent.TButton", command=self.open_pdf_from_home, padding=10).pack(ipadx=20, ipady=5)
-    
+        # Card 1: Start New Task (The "Dashed" Box lookalike)
+        card1 = ttk.Frame(cards_frame, style="Card.TFrame", padding=2)
+        card1.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        
+        # Inner content of Card 1
+        c1_inner = ttk.Frame(card1, padding=30)
+        c1_inner.pack(fill="both", expand=True)
+        
+        ttk.Label(c1_inner, text="⬆️", font=("Segoe UI", 24)).pack(pady=(0,10))
+        ttk.Label(c1_inner, text="Start a new OCR task", font=("Segoe UI", 16, "bold")).pack()
+        ttk.Label(c1_inner, text="Drag and drop PDF, JPG files here", foreground="gray").pack(pady=5)
+        
+        ttk.Button(c1_inner, text="Select from Computer", style="Accent.TButton", command=self.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
+        
+        # Card 2: Batch Process (Simpler)
+        card2 = ttk.Frame(cards_frame, style="Card.TFrame", padding=2)
+        card2.pack(side="left", fill="both", expand=True, padx=(10, 0))
+        
+        c2_inner = ttk.Frame(card2, padding=30)
+        c2_inner.pack(fill="both", expand=True)
+        
+        ttk.Label(c2_inner, text="📑", font=("Segoe UI", 24)).pack(pady=(0,10))
+        ttk.Label(c2_inner, text="Batch Process", font=("Segoe UI", 16, "bold")).pack()
+        ttk.Label(c2_inner, text="Convert multiple files at once", foreground="gray").pack(pady=5)
+        ttk.Button(c2_inner, text="Open Batch Tool", command=lambda: self.switch_tab("batch")).pack(pady=20)
+
+        # Recent Documents Section
+        ttk.Label(self.view_home, text="Recent Documents", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
+        
+        # Treeview for Table
+        cols = ("Filename", "Date", "Size", "Status")
+        self.tree = ttk.Treeview(self.view_home, columns=cols, show="headings", height=8)
+        self.tree.pack(fill="both", expand=True)
+        
+        self.tree.heading("Filename", text="Filename")
+        self.tree.heading("Date", text="Date")
+        self.tree.heading("Size", text="Size")
+        self.tree.heading("Status", text="Status")
+        
+        self.tree.column("Filename", width=300)
+        self.tree.column("Date", width=150)
+        self.tree.column("Size", width=100)
+        self.tree.column("Status", width=100)
+        
+        # Dummy Data
+        self.tree.insert("", "end", values=("Invoice_Q4_2023.pdf", "Today, 10:23 AM", "2.4 MB", "Completed"))
+        self.tree.insert("", "end", values=("Scan_Contract_002.png", "Yesterday", "4.1 MB", "Processing"))
+        self.tree.insert("", "end", values=("Meeting_Notes_Oct.pdf", "Oct 20, 2023", "0.8 MB", "Failed"))
+
+    def build_history_view(self):
+        ttk.Label(self.view_history, text="History Logs", font=("Segoe UI", 20, "bold")).pack(anchor="w", pady=20)
+        ttk.Label(self.view_history, text="Shows past processing attempts.").pack(anchor="w")
+
     def open_pdf_from_home(self):
         self.switch_tab("scan")
         self.open_pdf()
@@ -140,13 +210,13 @@ class BiplobOCR(tk.Tk):
         self.scan_paned.pack(fill="both", expand=True)
 
         # Sidebar
-        self.scan_sidebar = ttk.Frame(self.scan_paned, width=250, padding=10)
+        self.scan_sidebar = ttk.Frame(self.scan_paned, width=300, padding=15)
         self.scan_paned.add(self.scan_sidebar, weight=0)
         
-        # Scan Sidebar Content (Simplified)
-        ttk.Label(self.scan_sidebar, text="Tools", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=10)
+        # Header
+        ttk.Label(self.scan_sidebar, text="Active Task", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(0, 20))
         
-        ttk.Button(self.scan_sidebar, text="📂 Open New", command=self.open_pdf).pack(fill="x", pady=2)
+        ttk.Button(self.scan_sidebar, text="📂 Open New PDF", command=self.open_pdf).pack(fill="x", pady=2)
         
         opt_frame = ttk.LabelFrame(self.scan_sidebar, text=app_state.t("grp_options"), padding=10)
         opt_frame.pack(fill="x", pady=20)
@@ -170,7 +240,7 @@ class BiplobOCR(tk.Tk):
         self.btn_process.pack(fill="x", pady=20)
         
         # Status
-        self.lbl_status = ttk.Label(self.scan_sidebar, text=app_state.t("lbl_status_idle"), foreground="gray", wraplength=150)
+        self.lbl_status = ttk.Label(self.scan_sidebar, text=app_state.t("lbl_status_idle"), foreground="gray", wraplength=250)
         self.lbl_status.pack(anchor="w", pady=5)
         self.progress = ttk.Progressbar(self.scan_sidebar, mode="indeterminate")
         self.progress.pack(fill="x")
