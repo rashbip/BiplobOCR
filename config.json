@@ -1,14 +1,14 @@
 {
     "theme": "dark",
-    "language": "en",
+    "language": "bn",
     "deskew": false,
     "clean": false,
     "rotate": false,
     "force": true,
     "optimize": "0",
-    "use_gpu": true,
+    "use_gpu": false,
     "gpu_device": "AMD Radeon RX 580 2048SP",
-    "max_cpu_threads": 3,
+    "max_cpu_threads": 4,
     "ocr_options": {
         "deskew": false,
         "clean": false,

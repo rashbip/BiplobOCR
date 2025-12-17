@@ -295,6 +295,10 @@ class BiplobOCR(tk.Tk):
         try:
             if self.stop_processing_flag: raise Exception("Process Cancelled")
             
+            lang_code = self.var_lang.get()
+            ocr_lang = "eng"
+            if lang_code == "bn": ocr_lang = "ben+eng"
+            
             opts = {
                 "deskew": self.var_deskew.get(),
                 "clean": self.var_clean.get(),
@@ -302,7 +306,8 @@ class BiplobOCR(tk.Tk):
                 "optimize": self.var_optimize.get(),
                 "use_gpu": self.var_gpu.get(),
                 "gpu_device": self.var_gpu_device.get(),
-                "max_cpu_threads": self.var_cpu_threads.get()
+                "max_cpu_threads": self.var_cpu_threads.get(),
+                "language": ocr_lang
             }
             temp_out = os.path.join(TEMP_DIR, "processed_output.pdf")
             
@@ -335,14 +340,21 @@ class BiplobOCR(tk.Tk):
             self.after(0, lambda: self.on_process_success(temp_out, sidecar))
             
         except subprocess.CalledProcessError as e:
-            # We NO LONGER re-ask here. We just report failure.
-            # If the user didn't force, and it failed, they know why (we warned them or they turned it off).
+            # Check if this error was actually due to a manual stop
+            if self.stop_processing_flag:
+                self.after(0, lambda: self.on_process_cancelled())
+                return
+
             err_msg = str(e.stderr) if e.stderr else str(e)
+            # Truncate overly long error logs
+            if len(err_msg) > 800:
+                err_msg = "...(logs truncated)...\n" + err_msg[-800:]
+                
             self.after(0, lambda: self.on_process_fail(err_msg))
             
         except Exception as e:
             err_msg = str(e)
-            if "Process Cancelled" in err_msg:
+            if "Process Cancelled" in err_msg or self.stop_processing_flag:
                 self.after(0, lambda: self.on_process_cancelled())
             else:
                 self.after(0, lambda: self.on_process_fail(err_msg))

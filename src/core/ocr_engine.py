@@ -85,7 +85,11 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
         if options.get("rotate"): base_cmd.append("--rotate-pages")
         if options.get("optimize", "0") != "0": 
             base_cmd.extend(["--optimize", options.get("optimize")])
-
+        
+        # Language
+        lang = options.get("language", "eng")
+        base_cmd.extend(["-l", lang])
+            
     sidecar_file = output_path.replace(".pdf", ".txt")
     base_cmd.extend(["--sidecar", sidecar_file])
     base_cmd.append("-v")
@@ -128,14 +132,16 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
         global ACTIVE_PROCESS
         
         if os.name == 'posix':
-            ACTIVE_PROCESS = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, start_new_session=True, bufsize=1, universal_newlines=True)
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, start_new_session=True, bufsize=1, universal_newlines=True)
         else:
-            ACTIVE_PROCESS = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, startupinfo=startupinfo, bufsize=1, universal_newlines=True)
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, startupinfo=startupinfo, bufsize=1, universal_newlines=True)
+
+        ACTIVE_PROCESS = proc
 
         stderr_output = []
         while True:
-            line = ACTIVE_PROCESS.stderr.readline()
-            if not line and ACTIVE_PROCESS.poll() is not None: break
+            line = proc.stderr.readline()
+            if not line and proc.poll() is not None: break
             if line:
                 stderr_output.append(line)
                 match = re.search(r'(?:INFO\s+-\s+|Page\s+|Scanning page\s+)(\d+)', line, re.IGNORECASE)
@@ -143,8 +149,8 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
                     try: progress_callback(int(match.group(1)))
                     except: pass
         
-        rc = ACTIVE_PROCESS.poll()
-        out = ACTIVE_PROCESS.stdout.read()
+        rc = proc.poll()
+        out = proc.stdout.read()
         err = "".join(stderr_output)
         ACTIVE_PROCESS = None
         
