@@ -17,14 +17,9 @@ from ..core.config_manager import state as app_state
 from ..core.history_manager import history
 from .pdf_viewer import PDFViewer
 from .settings_dialog import SettingsDialog
-
-# Company Theme - Strict adherence
-THEME_COLOR = "#A50F0F"
-THEME_COLOR_HOVER = "#c91212"
-THEME_COLOR_ACTIVE = "#8a0c0c"
-BG_COLOR = "#1e1e1e"
-SURFACE_COLOR = "#2d2d2d"
-FG_COLOR = "#ffffff"
+from ..core.theme import THEME_COLOR, THEME_COLOR_HOVER, THEME_COLOR_ACTIVE, BG_COLOR, SURFACE_COLOR, FG_COLOR
+from .views.home_view import HomeView
+from .views.batch_view import BatchView
 
 class BiplobOCR(tk.Tk):
     def __init__(self):
@@ -39,7 +34,7 @@ class BiplobOCR(tk.Tk):
         # Flags
         self.stop_processing_flag = False
         self.processing_active = False # To check on exit
-
+        
         self.setup_custom_theme()
         
         self.current_pdf_path = None
@@ -169,20 +164,30 @@ class BiplobOCR(tk.Tk):
         self.btn_cancel_global = ttk.Button(self.status_bar, text="🟥 STOP", command=self.cancel_processing, style="Danger.TButton")
         self.btn_cancel_global.pack(side="right", padx=10)
 
+        # Vars
+        self.var_deskew = tk.BooleanVar(value=app_state.get_option("deskew"))
+        self.var_clean = tk.BooleanVar(value=app_state.get_option("clean"))
+        self.var_rotate = tk.BooleanVar(value=app_state.get_option("rotate"))
+        self.var_force = tk.BooleanVar(value=app_state.get_option("force"))
+        self.var_optimize = tk.StringVar(value=app_state.get_option("optimize"))
+        self.var_gpu = tk.BooleanVar(value=app_state.get_option("use_gpu"))
+
         # --- VIEWS ---
-        self.view_home = ttk.Frame(self.content_area, padding=40)
+        # Refactored views
+        self.view_home = HomeView(self.content_area, self)
+        self.view_batch = BatchView(self.content_area, self)
+
         self.view_scan = ttk.Frame(self.content_area) 
         self.view_settings = ttk.Frame(self.content_area, padding=40)
         self.view_history = ttk.Frame(self.content_area, padding=40)
-        self.view_batch = ttk.Frame(self.content_area, padding=40)
 
-        self.build_home_view()
+        # Build other views inline for now
         self.build_scan_view()
         self.build_settings_view()
         self.build_history_view()
-        self.build_batch_view()
 
         # Init
+        self.view_home.pack(fill="both", expand=True) # Default
         self.switch_tab("home")
     
     def create_nav_btn(self, text, tab, parent=None):
@@ -202,7 +207,7 @@ class BiplobOCR(tk.Tk):
         if tab == "home":
             self.view_home.pack(fill="both", expand=True)
             self.btn_home.configure(style="Accent.TButton")
-            self.refresh_recent_docs() 
+            self.view_home.refresh_recent_docs() 
         elif tab == "scan":
             self.view_scan.pack(fill="both", expand=True)
             self.btn_tools.configure(style="Accent.TButton")
@@ -249,6 +254,7 @@ class BiplobOCR(tk.Tk):
         app_state.set_option("rotate", self.var_rotate.get())
         app_state.set_option("force", self.var_force.get())
         app_state.set_option("optimize", self.var_optimize.get())
+        app_state.set_option("use_gpu", self.var_gpu.get())
         app_state.save_config({}) 
 
         self.btn_process.config(state="disabled")
@@ -269,6 +275,7 @@ class BiplobOCR(tk.Tk):
                 "clean": self.var_clean.get(),
                 "rotate": self.var_rotate.get(),
                 "optimize": self.var_optimize.get(),
+                "use_gpu": self.var_gpu.get()
             }
             temp_out = os.path.join(TEMP_DIR, "processed_output.pdf")
             
@@ -348,7 +355,13 @@ class BiplobOCR(tk.Tk):
 
     # --- BATCH LOGIC ---
     def start_batch_processing(self):
-        if not self.batch_files:
+        # Access batch_files from batch view?
+        # Since logic was in app.py, batch_files was bound to App.
+        # But BatchView now handles UI.
+        # Wait, BatchView now has `self.controller` which is App.
+        # But `batch_files` list should belong to App or View?
+        # Let's keep `batch_files` in App for simplicity as controller data.
+        if not hasattr(self, 'batch_files') or not self.batch_files:
             messagebox.showwarning("Empty", "Please add files to process.")
             return
             
@@ -363,12 +376,26 @@ class BiplobOCR(tk.Tk):
         
         threading.Thread(target=self.run_batch_logic, args=(out_dir,), daemon=True).start()
 
+    def add_batch_files(self):
+        files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
+        if not files: return
+        if not hasattr(self, 'batch_files'): self.batch_files = []
+        for f in files:
+            if any(bf["path"] == f for bf in self.batch_files): continue
+            item_id = self.batch_tree.insert("", "end", values=(os.path.basename(f), "Pending"))
+            self.batch_files.append({"path": f, "id": item_id, "status": "Pending"})
+
+    def clear_batch_files(self):
+        self.batch_tree.delete(*self.batch_tree.get_children())
+        self.batch_files = []
+
     def run_batch_logic(self, out_dir):
         opts = {
             "deskew": self.var_deskew.get(),
             "clean": self.var_clean.get(),
             "rotate": self.var_rotate.get(),
             "optimize": self.var_optimize.get(),
+            "use_gpu": self.var_gpu.get()
         }
         
         success_count = 0
@@ -409,8 +436,6 @@ class BiplobOCR(tk.Tk):
                 try: 
                     with pikepdf.open(fpath): pass
                 except:
-                    # Basic password check failed, maybe ask? 
-                    # For batch, just fail
                     raise Exception("Password Required")
 
                 run_ocr(fpath, out_path, None, force=True, options=opts, progress_callback=batch_prog_cb)
@@ -452,54 +477,6 @@ class BiplobOCR(tk.Tk):
         else:
             messagebox.showinfo("Batch Complete", f"Processed {total} files.\nSuccessful: {success}")
 
-    # UI Builders
-    def build_home_view(self):
-        ttk.Label(self.view_home, text="Welcome to BiplobOCR", style="Header.TLabel").pack(anchor="w")
-        ttk.Label(self.view_home, text="Ready to digitize your documents? Start a new scan or pick up where you left off.", font=("Segoe UI", 12), foreground="gray").pack(anchor="w", pady=(5, 30))
-        
-        cards_frame = ttk.Frame(self.view_home)
-        cards_frame.pack(fill="x", pady=20)
-        
-        # Start Card
-        card1 = ttk.Frame(cards_frame, style="Card.TFrame", padding=2)
-        card1.pack(side="left", fill="both", expand=True, padx=(0, 10))
-        c1_inner = ttk.Frame(card1, padding=30, style="Card.TFrame")
-        c1_inner.pack(fill="both", expand=True)
-        ttk.Label(c1_inner, text="📂", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
-        ttk.Label(c1_inner, text="Start a new OCR task", font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Label(c1_inner, text="Securely process PDF, JPG, PNG", foreground="gray", background=SURFACE_COLOR).pack(pady=5)
-        ttk.Button(c1_inner, text="Select from Computer", style="Accent.TButton", command=self.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
-        
-        # Batch Card
-        card2 = ttk.Frame(cards_frame, style="Card.TFrame", padding=2)
-        card2.pack(side="left", fill="both", expand=True, padx=(10, 0))
-        c2_inner = ttk.Frame(card2, padding=30, style="Card.TFrame")
-        c2_inner.pack(fill="both", expand=True)
-        ttk.Label(c2_inner, text="📦", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
-        ttk.Label(c2_inner, text="Batch Process", font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Button(c2_inner, text="Open Batch Tool", command=lambda: self.switch_tab("batch")).pack(pady=20)
-
-        # Recent Documents (Home)
-        ttk.Label(self.view_home, text="Recent Activity", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
-        
-        cols = ("Filename", "Date", "Status")
-        self.tree_recent = ttk.Treeview(self.view_home, columns=cols, show="headings", height=6)
-        self.tree_recent.pack(fill="both", expand=True)
-        self.tree_recent.heading("Filename", text="Filename")
-        self.tree_recent.heading("Date", text="Date")
-        self.tree_recent.heading("Status", text="Status")
-        self.tree_recent.column("Filename", width=300)
-        self.tree_recent.column("Date", width=150)
-        self.tree_recent.column("Status", width=100)
-        self.refresh_recent_docs()
-
-    def refresh_recent_docs(self):
-        for item in self.tree_recent.get_children(): self.tree_recent.delete(item)
-        data = history.get_all()
-        for i, item in enumerate(data):
-            if i >= 5: break
-            self.tree_recent.insert("", "end", values=(item["filename"], item["date"], item["status"]))
-
     def build_history_view(self):
         ttk.Label(self.view_history, text="History Logs", style="Header.TLabel").pack(anchor="w", pady=20)
         cols = ("Filename", "Date", "Size", "Status")
@@ -533,12 +510,7 @@ class BiplobOCR(tk.Tk):
         opt_frame = ttk.LabelFrame(self.scan_sidebar, text=app_state.t("grp_options"), padding=10)
         opt_frame.pack(fill="x", pady=20)
 
-        self.var_deskew = tk.BooleanVar(value=app_state.get_option("deskew"))
-        self.var_clean = tk.BooleanVar(value=app_state.get_option("clean"))
-        self.var_rotate = tk.BooleanVar(value=app_state.get_option("rotate"))
-        self.var_force = tk.BooleanVar(value=app_state.get_option("force"))
-        self.var_optimize = tk.StringVar(value=app_state.get_option("optimize"))
-
+        # Variables bound in build_ui
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_deskew"), variable=self.var_deskew).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_clean"), variable=self.var_clean).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_rotate"), variable=self.var_rotate).pack(anchor="w", pady=2)
@@ -551,9 +523,6 @@ class BiplobOCR(tk.Tk):
         
         self.lbl_status = ttk.Label(self.scan_sidebar, text=app_state.t("lbl_status_idle"), foreground="gray", wraplength=250)
         self.lbl_status.pack(anchor="w", pady=5)
-        # We removed local progress because global progress exists now, but keeping it as a small indicator or removing?
-        # User requested: "progress should be present in evry screens bottom"
-        # So we can remove this local one or keep it. I'll remove it to avoid redundancy and cleaner UI.
 
         self.viewer_container = ttk.Frame(self.scan_paned)
         self.scan_paned.add(self.viewer_container, weight=1)
@@ -561,51 +530,11 @@ class BiplobOCR(tk.Tk):
         self.viewer.pack(fill="both", expand=True)
         self.success_frame = ttk.Frame(self.viewer_container, style="Card.TFrame", padding=20)
 
-    def build_batch_view(self):
-        ttk.Label(self.view_batch, text="Batch Processing", style="Header.TLabel").pack(anchor="w", pady=(20, 10))
-        ttk.Label(self.view_batch, text="Process multiple documents automatically.", foreground="gray").pack(anchor="w", pady=(0, 20))
-        toolbar = ttk.Frame(self.view_batch)
-        toolbar.pack(fill="x", pady=5)
-        ttk.Button(toolbar, text="➕ Add Files", command=self.add_batch_files, style="Accent.TButton", width=15).pack(side="left", padx=(0, 5))
-        ttk.Button(toolbar, text="🗑 Clear List", command=self.clear_batch_files).pack(side="left")
-
-        cols = ("Filename", "Status")
-        self.batch_tree = ttk.Treeview(self.view_batch, columns=cols, show="headings", height=10)
-        self.batch_tree.pack(fill="both", expand=True, pady=10)
-        self.batch_tree.heading("Filename", text="Filename")
-        self.batch_tree.heading("Status", text="Status")
-        self.batch_tree.column("Filename", width=400)
-        self.batch_tree.column("Status", width=150)
-        
-        controls = ttk.Frame(self.view_batch, padding=10, style="Card.TFrame")
-        controls.pack(fill="x", pady=10)
-        
-        opt_box = ttk.Frame(controls, style="Card.TFrame")
-        opt_box.pack(side="left", fill="both", expand=True)
-        ttk.Label(opt_box, text="Batch Options", font=("Segoe UI", 10, "bold"), background=SURFACE_COLOR).pack(anchor="w")
-        ttk.Checkbutton(opt_box, text=app_state.t("opt_deskew"), variable=self.var_deskew).pack(side="left", padx=5)
-        ttk.Checkbutton(opt_box, text=app_state.t("opt_clean"), variable=self.var_clean).pack(side="left", padx=5)
-        
-        self.btn_start_batch = ttk.Button(controls, text="▶ Start Batch", command=self.start_batch_processing, style="Accent.TButton", width=20)
-        self.btn_start_batch.pack(side="right")
-        
-        self.batch_files = [] 
-
-    def add_batch_files(self):
-        files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
-        if not files: return
-        for f in files:
-            if any(bf["path"] == f for bf in self.batch_files): continue
-            item_id = self.batch_tree.insert("", "end", values=(os.path.basename(f), "Pending"))
-            self.batch_files.append({"path": f, "id": item_id, "status": "Pending"})
-
-    def clear_batch_files(self):
-        self.batch_tree.delete(*self.batch_tree.get_children())
-        self.batch_files = []
-
     def build_settings_view(self):
         lbl = ttk.Label(self.view_settings, text=app_state.t("settings_title"), font=("Segoe UI", 20, "bold"))
         lbl.pack(anchor="w", pady=(0, 20))
+        
+        # General
         f = ttk.LabelFrame(self.view_settings, text="General", padding=20)
         f.pack(fill="x", pady=10)
         ttk.Label(f, text=app_state.t("lbl_lang")).pack(anchor="w")
@@ -613,12 +542,19 @@ class BiplobOCR(tk.Tk):
         cb_lang = ttk.Combobox(f, textvariable=self.var_lang, values=["en", "bn"], state="readonly")
         cb_lang.pack(fill="x", pady=(5, 10))
         cb_lang.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
+
+        # Advanced
+        f2 = ttk.LabelFrame(self.view_settings, text="Advanced", padding=20)
+        f2.pack(fill="x", pady=10)
+        ttk.Checkbutton(f2, text="Use GPU Acceleration (Experimental)", variable=self.var_gpu, command=lambda: app_state.set_option("use_gpu", self.var_gpu.get())).pack(anchor="w")
+        ttk.Label(f2, text="* May cause instability on some systems. Restart required.", foreground="gray", font=("Segoe UI", 8)).pack(anchor="w", pady=(5,0))
+
         ttk.Label(self.view_settings, text="Changes require restart to fully apply UI text translations.", foreground="gray").pack(pady=20)
         
     def save_settings_inline(self):
         old_lang = app_state.get("language")
         new_lang = self.var_lang.get()
-        new_conf = { "language": new_lang, "theme": "dark" }
+        new_conf = { "language": new_lang, "theme": "dark", "use_gpu": self.var_gpu.get() }
         app_state.save_config(new_conf)
         if old_lang != new_lang: messagebox.showinfo("Restart Required", "Applications language changed. Please restart BiplobOCR for changes to take effect.")
 

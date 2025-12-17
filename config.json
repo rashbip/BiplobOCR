@@ -1,6 +1,12 @@
 {
     "theme": "dark",
     "language": "bn",
+    "deskew": false,
+    "clean": false,
+    "rotate": false,
+    "force": true,
+    "optimize": "0",
+    "use_gpu": false,
     "ocr_options": {
         "deskew": false,
         "clean": false,
