@@ -5,10 +5,11 @@
     "clean": false,
     "rotate": false,
     "force": true,
-    "optimize": "0",
+    "optimize": "1",
     "use_gpu": false,
     "gpu_device": "AMD Radeon RX 580 2048SP",
     "max_cpu_threads": 4,
+    "xml_type": "hocr",
     "ocr_options": {
         "deskew": false,
         "clean": false,

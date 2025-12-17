@@ -79,6 +79,9 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
     if force: base_cmd.append("--force-ocr")
     else: base_cmd.append("--skip-text")
 
+    # Preserve file size by avoiding strict PDF/A conversion
+    base_cmd.extend(["--output-type", "pdf"])
+
     if options:
         if options.get("deskew"): base_cmd.append("--deskew")
         if options.get("clean"): base_cmd.append("--clean")

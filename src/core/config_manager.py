@@ -8,11 +8,11 @@ CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
     "theme": "dark",
     "language": "en",
-    "deskew": True,
+    "deskew": False,
     "clean": False,
     "rotate": True,
     "force": False,
-    "optimize": "0",
+    "optimize": "1",
     "use_gpu": False,
     "gpu_device": "Auto",
     "max_cpu_threads": 2
