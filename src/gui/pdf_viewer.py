@@ -33,49 +33,111 @@ class PDFViewer(ttk.Frame):
         self.lbl_filename.pack(side="left", padx=(5, 20))
 
         # Navigation
-        ttk.Button(self.toolbar, text="First", command=self.first_page, width=4).pack(side="left", padx=1)
+        ttk.Button(self.toolbar, text="First", command=self.first_page, width=5).pack(side="left", padx=1)
         ttk.Button(self.toolbar, text="<", command=self.prev_page, width=3).pack(side="left", padx=1)
-        self.lbl_page = ttk.Label(self.toolbar, text="0 / 0", width=10, anchor="center")
+        self.lbl_page = ttk.Label(self.toolbar, text="0 / 0", width=12, anchor="center")
         self.lbl_page.pack(side="left", padx=5)
         ttk.Button(self.toolbar, text=">", command=self.next_page, width=3).pack(side="left", padx=1)
-        ttk.Button(self.toolbar, text="Last", command=self.last_page, width=4).pack(side="left", padx=1)
+        ttk.Button(self.toolbar, text="Last", command=self.last_page, width=5).pack(side="left", padx=1)
         
         ttk.Separator(self.toolbar, orient="vertical").pack(side="left", fill="y", padx=10)
 
         # Zoom
         ttk.Button(self.toolbar, text="-", command=self.zoom_out, width=3).pack(side="left")
-        self.lbl_zoom = ttk.Label(self.toolbar, text="100%", width=6, anchor="center")
+        self.lbl_zoom = ttk.Label(self.toolbar, text="100%", width=8, anchor="center")
         self.lbl_zoom.pack(side="left", padx=2)
         ttk.Button(self.toolbar, text="+", command=self.zoom_in, width=3).pack(side="left")
         
         ttk.Separator(self.toolbar, orient="vertical").pack(side="left", fill="y", padx=10)
         
-        # Additional Tools
-        ttk.Button(self.toolbar, text="Of Rotate", command=self.rotate_view).pack(side="left", padx=2)
+        # Tools
+        ttk.Button(self.toolbar, text="Rotate", command=self.rotate_view).pack(side="left", padx=2)
         
-        # Mode info
-        ttk.Label(self.toolbar, text="(Drag to Select Text)", foreground="gray").pack(side="right", padx=10)
+        # View Mode Switch (Icon-like)
+        self.is_text_mode = False
+        self.btn_mode = ttk.Button(self.toolbar, text="👁 View Text", command=self.toggle_view_mode)
+        self.btn_mode.pack(side="right", padx=10)
 
-        # --- Main Canvas ---
+        # --- Main Container Stack ---
         self.container = ttk.Frame(self)
         self.container.pack(fill="both", expand=True)
 
-        self.canvas = tk.Canvas(self.container, bg="#2b2b2b", highlightthickness=0)
-        self.v_scroll = ttk.Scrollbar(self.container, orient="vertical", command=self.canvas.yview)
-        self.h_scroll = ttk.Scrollbar(self.container, orient="horizontal", command=self.canvas.xview)
-        
+        # 1. Canvas View (Image)
+        self.canvas_frame = ttk.Frame(self.container)
+        self.canvas = tk.Canvas(self.canvas_frame, bg="#2b2b2b", highlightthickness=0)
+        self.v_scroll = ttk.Scrollbar(self.canvas_frame, orient="vertical", command=self.canvas.yview)
+        self.h_scroll = ttk.Scrollbar(self.canvas_frame, orient="horizontal", command=self.canvas.xview)
         self.canvas.configure(yscrollcommand=self.v_scroll.set, xscrollcommand=self.h_scroll.set)
         
         self.v_scroll.pack(side="right", fill="y")
         self.h_scroll.pack(side="bottom", fill="x")
         self.canvas.pack(side="left", fill="both", expand=True)
 
+        # 2. Text View (Raw Text)
+        self.text_frame = ttk.Frame(self.container)
+        self.text_widget = tk.Text(self.text_frame, wrap="word", font=("Segoe UI", 11), padx=20, pady=20)
+        self.text_scroll = ttk.Scrollbar(self.text_frame, orient="vertical", command=self.text_widget.yview)
+        self.text_widget.config(yscrollcommand=self.text_scroll.set)
+        
+        self.text_scroll.pack(side="right", fill="y")
+        self.text_widget.pack(side="left", fill="both", expand=True)
+
         # Events
         self.canvas.bind("<ButtonPress-1>", self.on_mouse_down)
         self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
-        # Mouse wheel
         self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
+
+        # Show initial
+        self.canvas_frame.pack(fill="both", expand=True)
+
+    def toggle_view_mode(self):
+        self.is_text_mode = not self.is_text_mode
+        
+        if self.is_text_mode:
+            self.btn_mode.config(text="🖼 View Image")
+            self.canvas_frame.pack_forget()
+            self.text_frame.pack(fill="both", expand=True)
+            self.show_text_content()
+        else:
+            self.btn_mode.config(text="👁 View Text")
+            self.text_frame.pack_forget()
+            self.canvas_frame.pack(fill="both", expand=True)
+            # Image is already there or needs refresh?
+            # It persists, so no need to reload unless page changed.
+
+    def show_text_content(self):
+        if not self.doc: return
+        page = self.doc.load_page(self.current_page)
+        text = page.get_text("text")
+        
+        self.text_widget.config(state="normal")
+        self.text_widget.delete("1.0", "end")
+        self.text_widget.insert("1.0", text if text.strip() else "[No text layer found on this page]")
+        self.text_widget.config(state="disabled")
+
+    def show_page(self):
+        if not self.doc: return
+        self.canvas.delete("all")
+        
+        page = self.doc.load_page(self.current_page)
+        if self.rotation != 0:
+            page.set_rotation(self.rotation)
+            
+        mat = fitz.Matrix(self.zoom, self.zoom)
+        pix = page.get_pixmap(matrix=mat)
+        img_data = pix.tobytes("ppm")
+        
+        self.image_ref = ImageTk.PhotoImage(data=img_data)
+        
+        # Center image logic optional, but simple placement:
+        self.canvas.create_image(0, 0, image=self.image_ref, anchor="nw")
+        
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+        # If text mode is active, also update text
+        if self.is_text_mode:
+            self.show_text_content()
 
     def load_pdf(self, path, password=None):
         try:

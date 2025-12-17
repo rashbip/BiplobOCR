@@ -25,17 +25,20 @@ except ImportError:
 class BiplobOCR(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.withdraw() # Hide until setup done
+        self.withdraw()
         self.load_settings()
         
         self.title(app_state.t("app_title"))
-        self.geometry("1100x750")
+        self.geometry("1200x800")
+        self.minsize(900, 600)
+        
+        self.current_pdf_path = None
+        self.current_pdf_password = None
         
         self.build_ui()
         self.deiconify()
 
     def load_settings(self):
-        # Apply theme
         theme = app_state.get("theme")
         if sv_ttk:
             if theme == "dark":
@@ -50,46 +53,111 @@ class BiplobOCR(tk.Tk):
                 except:
                     sv_ttk.set_theme("light") 
 
-    def open_settings(self):
-        SettingsDialog(self)
-
     def build_ui(self):
-        # Top Menubar (for Settings)
-        self.menubar = tk.Menu(self)
-        self.config(menu=self.menubar)
-        
-        file_menu = tk.Menu(self.menubar, tearoff=0)
-        self.menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Open...", command=self.open_pdf)
-        file_menu.add_command(label="Exit", command=self.quit)
-        
-        self.menubar.add_command(label="⚙️ " + app_state.t("settings_title"), command=self.open_settings)
-        
-        # Main Layout
-        self.paned = ttk.PanedWindow(self, orient="horizontal")
-        self.paned.pack(fill="both", expand=True, padx=10, pady=10)
+        # --- Main Layout (Nav Rail + Content) ---
+        self.main_container = ttk.Frame(self)
+        self.main_container.pack(fill="both", expand=True)
 
-        # --- Sidebar ---
-        self.sidebar = ttk.Frame(self.paned, width=280, padding=15)
-        self.paned.add(self.sidebar, weight=0)
+        # 1. Navigation Rail (Left)
+        self.nav_rail = ttk.Frame(self.main_container, padding=10, width=80)
+        self.nav_rail.pack(side="left", fill="y")
+        
+        # App Icon / Title (Short)
+        ttk.Label(self.nav_rail, text="B", font=("Segoe UI", 30, "bold"), foreground="#007acc").pack(pady=20)
 
-        # Title
-        ttk.Label(self.sidebar, text=app_state.t("app_title"), font=("Segoe UI Variable Display", 22, "bold")).pack(pady=(0, 20), anchor="w")
+        # Nav Buttons (Using Unicode Icons for simplicity)
+        self.btn_home = ttk.Button(self.nav_rail, text="🏠\nHome", command=lambda: self.switch_tab("home"), style="Accent.TButton", width=6)
+        self.btn_home.pack(pady=10)
+
+        self.btn_scan = ttk.Button(self.nav_rail, text="⚡\nOCR", command=lambda: self.switch_tab("scan"), width=6)
+        self.btn_scan.pack(pady=10)
         
-        # Open Button
-        ttk.Button(self.sidebar, text=app_state.t("btn_open"), command=self.open_pdf, style="Accent.TButton").pack(fill="x", pady=5)
+        self.btn_settings = ttk.Button(self.nav_rail, text="⚙️\nSet...", command=lambda: self.switch_tab("settings"), width=6)
+        self.btn_settings.pack(side="bottom", pady=20)
+
+        # Separator
+        ttk.Separator(self.main_container, orient="vertical").pack(side="left", fill="y")
+
+        # 2. Content Stack (Right)
+        self.content_area = ttk.Frame(self.main_container)
+        self.content_area.pack(side="left", fill="both", expand=True)
         
-        # Options Group
-        opt_frame = ttk.LabelFrame(self.sidebar, text=app_state.t("grp_options"), padding=10)
+        # --- VIEWS ---
+        self.view_home = ttk.Frame(self.content_area, padding=40)
+        self.view_scan = ttk.Frame(self.content_area) # Will hold PDF + Sidebar
+        self.view_settings = ttk.SettingsView(self.content_area) if hasattr(ttk, 'SettingsView') else ttk.Frame(self.content_area, padding=40) # Custom logic below
+
+        # Build Home
+        self.build_home_view()
+        
+        # Build Scan
+        self.build_scan_view()
+        
+        # Build Settings
+        self.build_settings_view()
+
+        # Init
+        self.switch_tab("home")
+    
+    def switch_tab(self, tab):
+        # Hide all
+        self.view_home.pack_forget()
+        self.view_scan.pack_forget()
+        self.view_settings.pack_forget()
+        
+        # Reset styles
+        self.btn_home.configure(style="TButton")
+        self.btn_scan.configure(style="TButton")
+        self.btn_settings.configure(style="TButton")
+
+        if tab == "home":
+            self.view_home.pack(fill="both", expand=True)
+            self.btn_home.configure(style="Accent.TButton")
+        elif tab == "scan":
+            self.view_scan.pack(fill="both", expand=True)
+            self.btn_scan.configure(style="Accent.TButton")
+        elif tab == "settings":
+            self.view_settings.pack(fill="both", expand=True)
+            self.btn_settings.configure(style="Accent.TButton")
+
+    def build_home_view(self):
+        # Big hero section
+        ttk.Label(self.view_home, text=app_state.t("app_title"), font=("Segoe UI Variable Display", 32, "bold")).pack(pady=(50, 10))
+        ttk.Label(self.view_home, text="Professional PDF OCR Solution", font=("Segoe UI", 16), foreground="gray").pack(pady=(0, 40))
+        
+        btn_frame = ttk.Frame(self.view_home)
+        btn_frame.pack()
+        
+        ttk.Button(btn_frame, text="📂 Open PDF", style="Accent.TButton", command=self.open_pdf_from_home, padding=10).pack(ipadx=20, ipady=5)
+    
+    def open_pdf_from_home(self):
+        self.switch_tab("scan")
+        self.open_pdf()
+
+    def build_scan_view(self):
+        # Sidebar + Viewer Layout
+        self.scan_paned = ttk.PanedWindow(self.view_scan, orient="horizontal")
+        self.scan_paned.pack(fill="both", expand=True)
+
+        # Sidebar
+        self.scan_sidebar = ttk.Frame(self.scan_paned, width=250, padding=10)
+        self.scan_paned.add(self.scan_sidebar, weight=0)
+        
+        # Scan Sidebar Content (Simplified)
+        ttk.Label(self.scan_sidebar, text="Tools", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=10)
+        
+        ttk.Button(self.scan_sidebar, text="📂 Open New", command=self.open_pdf).pack(fill="x", pady=2)
+        
+        opt_frame = ttk.LabelFrame(self.scan_sidebar, text=app_state.t("grp_options"), padding=10)
         opt_frame.pack(fill="x", pady=20)
-        
-        # Load Defaults from persistent state (defaulting to False as requested)
+
+        # Variables
         self.var_deskew = tk.BooleanVar(value=app_state.get_option("deskew"))
         self.var_clean = tk.BooleanVar(value=app_state.get_option("clean"))
         self.var_rotate = tk.BooleanVar(value=app_state.get_option("rotate"))
         self.var_force = tk.BooleanVar(value=app_state.get_option("force"))
         self.var_optimize = tk.StringVar(value=app_state.get_option("optimize"))
-        
+
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_deskew"), variable=self.var_deskew).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_clean"), variable=self.var_clean).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_rotate"), variable=self.var_rotate).pack(anchor="w", pady=2)
@@ -98,39 +166,59 @@ class BiplobOCR(tk.Tk):
         ttk.Label(opt_frame, text=app_state.t("lbl_optimize")).pack(anchor="w", pady=(10, 2))
         ttk.Combobox(opt_frame, textvariable=self.var_optimize, values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
 
-        # Process Button
-        self.btn_process = ttk.Button(self.sidebar, text=app_state.t("btn_process"), command=self.start_processing_thread, state="disabled", style="Accent.TButton")
+        self.btn_process = ttk.Button(self.scan_sidebar, text=app_state.t("btn_process"), command=self.start_processing_thread, state="disabled", style="Accent.TButton")
         self.btn_process.pack(fill="x", pady=20)
         
         # Status
-        self.lbl_status = ttk.Label(self.sidebar, text=app_state.t("lbl_status_idle"), foreground="gray", wraplength=250)
+        self.lbl_status = ttk.Label(self.scan_sidebar, text=app_state.t("lbl_status_idle"), foreground="gray", wraplength=150)
         self.lbl_status.pack(anchor="w", pady=5)
-        
-        self.progress = ttk.Progressbar(self.sidebar, mode="indeterminate")
-        self.progress.pack(fill="x", pady=5)
+        self.progress = ttk.Progressbar(self.scan_sidebar, mode="indeterminate")
+        self.progress.pack(fill="x")
 
-        # --- Content Area ---
-        self.content_frame = ttk.Frame(self.paned)
-        self.paned.add(self.content_frame, weight=1)
+        # Viewer Area
+        self.viewer_container = ttk.Frame(self.scan_paned)
+        self.scan_paned.add(self.viewer_container, weight=1)
         
-        # We use a container to swap between "Viewer" and "Success View"
-        self.view_container = ttk.Frame(self.content_frame)
-        self.view_container.pack(fill="both", expand=True)
-        
-        self.viewer = PDFViewer(self.view_container)
+        self.viewer = PDFViewer(self.viewer_container)
         self.viewer.pack(fill="both", expand=True)
+        
+        # Success Overlay (Initially Hidden)
+        self.success_frame = ttk.Frame(self.viewer_container, style="Card.TFrame", padding=20)
 
-        # Success View (Created but hidden)
-        self.success_frame = ttk.Frame(self.content_frame)
-        # We will pack this when needed by hiding view_container
+    def build_settings_view(self):
+        # Use inline settings
+        lbl = ttk.Label(self.view_settings, text=app_state.t("settings_title"), font=("Segoe UI", 20, "bold"))
+        lbl.pack(anchor="w", pady=(0, 20))
+
+        # General
+        f = ttk.LabelFrame(self.view_settings, text="General", padding=20)
+        f.pack(fill="x", pady=10)
+        
+        ttk.Label(f, text=app_state.t("lbl_lang")).pack(anchor="w")
+        self.var_lang = tk.StringVar(value=app_state.get("language", "en"))
+        cb_lang = ttk.Combobox(f, textvariable=self.var_lang, values=["en", "bn"], state="readonly")
+        cb_lang.pack(fill="x", pady=(5, 10))
+        cb_lang.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
+
+        ttk.Label(f, text=app_state.t("lbl_theme")).pack(anchor="w")
+        self.var_theme = tk.StringVar(value=app_state.get("theme", "system"))
+        cb_theme = ttk.Combobox(f, textvariable=self.var_theme, values=["system", "dark", "light"], state="readonly")
+        cb_theme.pack(fill="x", pady=(5, 10))
+        cb_theme.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
+
+        ttk.Label(self.view_settings, text="Changes require restart to fully apply UI text translations.", foreground="gray").pack(pady=20)
+        
+    def save_settings_inline(self):
+        new_conf = {
+            "language": self.var_lang.get(),
+            "theme": self.var_theme.get()
+        }
+        app_state.save_config(new_conf)
+        # Apply theme immediately if possible
+        if self.var_theme.get() != "system":
+            if sv_ttk: sv_ttk.set_theme(self.var_theme.get())
 
     # --- Actions ---
-    
-    def reload_ui(self):
-        # Restart is safer for Tkinter translation updates.
-        messagebox.showinfo("Restart Required", "Please restart the application to apply changes fully.")
-        self.destroy()
-
     def open_pdf(self):
         pdf = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
         if not pdf: return
@@ -148,19 +236,17 @@ class BiplobOCR(tk.Tk):
         self.viewer.load_pdf(pdf, password)
         self.btn_process.config(state="normal")
         
-        # Show viewer, hide success if open
-        self.success_frame.pack_forget()
-        self.view_container.pack(fill="both", expand=True)
+        # Hide success if showing
+        self.success_frame.place_forget()
         self.lbl_status.config(text=f"Loaded: {os.path.basename(pdf)}")
 
     def start_processing_thread(self):
-        # Save current options to state
         app_state.set_option("deskew", self.var_deskew.get())
         app_state.set_option("clean", self.var_clean.get())
         app_state.set_option("rotate", self.var_rotate.get())
         app_state.set_option("force", self.var_force.get())
         app_state.set_option("optimize", self.var_optimize.get())
-        app_state.save_config({}) # Persist to disk
+        app_state.save_config({})
 
         self.btn_process.config(state="disabled")
         self.progress.start(10)
@@ -179,7 +265,6 @@ class BiplobOCR(tk.Tk):
                 "optimize": self.var_optimize.get(),
             }
             temp_out = os.path.join(TEMP_DIR, "processed_output.pdf")
-            
             sidecar = run_ocr(
                 self.current_pdf_path, 
                 temp_out, 
@@ -188,7 +273,6 @@ class BiplobOCR(tk.Tk):
                 options=opts
             )
             self.after(0, lambda: self.on_process_success(temp_out, sidecar))
-            
         except subprocess.CalledProcessError as e:
             err_text = str(e.stderr).lower() if e.stderr else ""
             if "priorocrfounderror" in err_text or "page already has text" in err_text:
@@ -201,7 +285,7 @@ class BiplobOCR(tk.Tk):
     def on_process_fail(self, msg):
         self.progress.stop()
         self.btn_process.config(state="normal")
-        self.lbl_status.config(text="Failed: " + msg[:30])
+        self.lbl_status.config(text="Failed.")
         messagebox.showerror("Error", msg)
 
     def ask_force_continuation(self):
@@ -218,58 +302,34 @@ class BiplobOCR(tk.Tk):
         self.btn_process.config(state="normal")
         self.lbl_status.config(text=app_state.t("lbl_status_done"))
         
-        # Show Success UI in Center
-        self.view_container.pack_forget()
         self.show_success_ui(temp_out, sidecar)
 
     def show_success_ui(self, temp_out, sidecar):
-        # Clear previous
-        for widget in self.success_frame.winfo_children():
-            widget.destroy()
+        self.success_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        # Clear childs
+        for c in self.success_frame.winfo_children(): c.destroy()
         
-        self.success_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        # Center
+        c = ttk.Frame(self.success_frame)
+        c.place(relx=0.5, rely=0.5, anchor="center")
         
-        # Center Content
-        center = ttk.Frame(self.success_frame)
-        center.place(relx=0.5, rely=0.5, anchor="center")
+        ttk.Label(c, text="✅ " + app_state.t("msg_success"), font=("Segoe UI", 24)).pack(pady=10)
         
-        ttk.Label(center, text="✅ " + app_state.t("msg_success"), font=("Segoe UI", 25)).pack(pady=20)
-        ttk.Label(center, text=app_state.t("lbl_export_prompt"), font=("Segoe UI", 12)).pack(pady=10)
-        
-        btn_frame = ttk.Frame(center)
-        btn_frame.pack(pady=20)
-        
-        # 1. Save PDF
         def save_pdf():
             f = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])
             if f:
                 shutil.copy(temp_out, f)
-                messagebox.showinfo("Saved", f"PDF Saved to {f}")
+                messagebox.showinfo("Saved", "PDF Saved!")
 
-        # 2. Save Text
         def save_txt():
             f = filedialog.asksaveasfilename(defaultextension=".txt")
             if f:
                 shutil.copy(sidecar, f)
-                messagebox.showinfo("Saved", "Text Saved.")
-
-        # 3. Save hOCR
-        def save_hocr():
-            f = filedialog.asksaveasfilename(defaultextension=".hocr")
-            if f:
-                # Mock call or real call
-                try:
-                    run_tesseract_export(self.current_pdf_path, f.replace(".hocr", ""), "hocr")
-                    messagebox.showinfo("Saved", "hOCR Saved.")
-                except:
-                    messagebox.showerror("Error", "Export failed.")
-
-        ttk.Button(btn_frame, text="💾 Save Final PDF", command=save_pdf, style="Accent.TButton", width=25).pack(pady=5)
-        ttk.Button(btn_frame, text="📄 " + app_state.t("btn_save_txt"), command=save_txt, width=25).pack(pady=5)
-        ttk.Button(btn_frame, text="📑 " + app_state.t("btn_save_hocr"), command=save_hocr, width=25).pack(pady=5)
+                messagebox.showinfo("Saved", "Text Saved!")
         
-        ttk.Button(center, text=app_state.t("btn_close_export"), command=self.close_success_ui).pack(pady=20)
+        def close():
+            self.success_frame.place_forget()
 
-    def close_success_ui(self):
-        self.success_frame.pack_forget()
-        self.view_container.pack(fill="both", expand=True)
+        ttk.Button(c, text="💾 Save PDF", command=save_pdf, style="Accent.TButton", width=20).pack(pady=5)
+        ttk.Button(c, text="📄 Save Text", command=save_txt, width=20).pack(pady=5)
+        ttk.Button(c, text="Close", command=close, width=20).pack(pady=20)

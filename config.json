@@ -1,5 +1,5 @@
 {
-    "theme": "light",
+    "theme": "system",
     "language": "en",
     "ocr_options": {
         "deskew": false,
