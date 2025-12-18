@@ -47,11 +47,6 @@ class BatchView(ttk.Frame):
         # Load available - Reuse logic? Or direct import.
         from ...core.ocr_engine import get_available_languages
         avail = get_available_languages()
-        
-        # Filter internal
-        internal_packs = app_state.get("internal_packs", [])
-        avail = [l for l in avail if l not in internal_packs]
-
         last_used = app_state.get("last_used_ocr_languages")
         if not last_used: last_used = [app_state.get("ocr_language", "eng")]
 

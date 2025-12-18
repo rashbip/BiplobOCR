@@ -13,9 +13,9 @@
     "optimize": "0",
     "use_gpu": false,
     "gpu_device": "Auto",
+    "max_cpu_threads": 2,
     "internal_packs": [
         "osd",
         "equ"
-    ],
-    "max_cpu_threads": 2
+    ]
 }

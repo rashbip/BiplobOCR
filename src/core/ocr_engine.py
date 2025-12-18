@@ -72,8 +72,7 @@ def get_available_languages():
     if not os.path.exists(d): return ["eng"]
     langs = []
     for f in os.listdir(d):
-        # Exclude osd/equ as they are special data files, not languages
-        if f.endswith(".traineddata") and f not in ["osd.traineddata", "equ.traineddata"]:
+        if f.endswith(".traineddata") and f != "osd.traineddata":
             langs.append(f.replace(".traineddata", ""))
     return sorted(langs) if langs else ["eng"]
 
