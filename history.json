@@ -1,50 +1,34 @@
 [
     {
-        "filename": "222.pdf",
-        "date": "2025-12-18 21:03:31",
-        "size": "N/A",
-        "status": "Batch Cancelled",
-        "source_path": "C:/Users/biplo/Downloads/222.pdf",
-        "output_path": null
-    },
-    {
-        "filename": "selected_pages - Copy - Copy - Copy.pdf",
-        "date": "2025-12-18 20:02:04",
-        "size": "N/A",
-        "status": "Batch Cancelled",
-        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy.pdf",
-        "output_path": null
-    },
-    {
-        "filename": "selected_pages - Copy - Copy - Copy.pdf",
-        "date": "2025-12-18 19:57:36",
-        "size": "N/A",
-        "status": "Batch Cancelled",
-        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy.pdf",
-        "output_path": null
+        "filename": "selected_pages - Copy - Copy - Copy (3).pdf",
+        "date": "2025-12-18 21:19:15",
+        "size": "1.1 MB",
+        "status": "Completed",
+        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy (3).pdf",
+        "output_path": "C:/Users/biplo/Downloads/ll.pdf"
     },
     {
         "filename": "selected_pages - Copy - Copy - Copy (2).pdf",
-        "date": "2025-12-18 19:55:04",
+        "date": "2025-12-18 21:08:10",
         "size": "N/A",
-        "status": "Batch Failed",
+        "status": "Batch Success",
         "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy (2).pdf",
-        "output_path": null
+        "output_path": "C:/Users/biplo/Downloads\\biplob_ocr_selected_pages - Copy - Copy - Copy (2).pdf"
     },
     {
         "filename": "selected_pages - Copy - Copy - Copy (3).pdf",
-        "date": "2025-12-18 19:54:58",
+        "date": "2025-12-18 21:07:18",
         "size": "N/A",
-        "status": "Batch Failed",
+        "status": "Batch Success",
         "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy (3).pdf",
-        "output_path": null
+        "output_path": "C:/Users/biplo/Downloads\\biplob_ocr_selected_pages - Copy - Copy - Copy (3).pdf"
     },
     {
         "filename": "selected_pages - Copy - Copy - Copy.pdf",
-        "date": "2025-12-18 19:54:52",
+        "date": "2025-12-18 21:06:28",
         "size": "N/A",
-        "status": "Batch Failed",
+        "status": "Batch Success",
         "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy.pdf",
-        "output_path": null
+        "output_path": "C:/Users/biplo/Downloads\\biplob_ocr_selected_pages - Copy - Copy - Copy.pdf"
     }
 ]

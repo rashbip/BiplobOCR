@@ -239,7 +239,7 @@ def _run_cmd(cmd, env, progress_callback=None):
     
     return out, err
 
-def run_ocr(input_path, output_path, password=None, force=False, options=None, progress_callback=None):
+def run_ocr(input_path, output_path, password=None, force=False, options=None, progress_callback=None, log_callback=None):
     """
     Executes OCRmyPDF on the input file.
     
@@ -296,11 +296,11 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
             logging.info(f"Large PDF detected ({total_pages} pages). Engaging chunking mode...")
             return _run_ocr_chunked(
                 working_input, output_path, total_pages, CHUNK_SIZE, 
-                force, options, progress_callback
+                force, options, progress_callback, log_callback
             )
         else:
             # --- STANDARD SINGLE FILE PROCESS ---
-            return _run_ocr_single(working_input, output_path, force, options, progress_callback)
+            return _run_ocr_single(working_input, output_path, force, options, progress_callback, log_callback)
             
     except OCRError as e:
         raise e
@@ -312,7 +312,7 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
             try: os.remove(decrypted_temp)
             except: pass
 
-def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, options, progress_callback):
+def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, options, progress_callback, log_callback):
     """
     Splits PDF into chunks, OCRs them individually, and merges them back.
     """
@@ -349,7 +349,6 @@ def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, op
             c_out = c_path.replace(".pdf", "_ocr.pdf")
             
             # Wrapper for progress callback to map chunk page -> global page
-            # OCRmyPDF will report page 1..N for the chunk. We add offset.
             def chunk_progress_wrapper(p):
                 if progress_callback:
                     progress_callback(offset + p)
@@ -357,7 +356,7 @@ def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, op
             logging.info(f"Processing chunk {i+1}/{len(chunk_files)}...")
             
             # Recursive call to single runner
-            _run_ocr_single(c_path, c_out, force, options, chunk_progress_wrapper)
+            _run_ocr_single(c_path, c_out, force, options, chunk_progress_wrapper, log_callback)
             processed_chunks.append(c_out)
             
         # 3. Merge Results
@@ -365,7 +364,6 @@ def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, op
         _merge_pdfs(processed_chunks, output_path)
         
         # 4. Generate Sidecar Text (merged from chunks)
-        # Note: ocrmypdf produces a sidecar per chunk. We accept that and merge them manually.
         sidecar_file = output_path.replace(".pdf", ".txt")
         full_text = ""
         for p_chunk in processed_chunks:
@@ -386,7 +384,181 @@ def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, op
         try: shutil.rmtree(chunks_dir)
         except: pass
 
-def _run_ocr_single(input_path, output_path, force, options, progress_callback):
+def _run_cmd(cmd, env, progress_callback=None, log_callback=None):
+    """
+    Executes a subprocess command and handles output/progress parsing.
+    Captures stderr for progress updates from OCRmyPDF/Tesseract.
+    """
+    global ACTIVE_PROCESS
+    
+    startupinfo = None
+    if os.name == 'nt': 
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    
+    # Process creation: Use new session/process group to allow cleanup
+    if os.name == 'posix':
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
+            env=env, start_new_session=True, bufsize=1, universal_newlines=True
+        )
+    else:
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
+            env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, 
+            startupinfo=startupinfo, bufsize=1, universal_newlines=True
+        )
+
+    ACTIVE_PROCESS = proc
+
+    stderr_output = []
+    
+    # Read stderr line by line for progress
+    while True:
+        line = proc.stderr.readline()
+        if not line and proc.poll() is not None: break
+        if line:
+            stderr_output.append(line)
+            # Send to log callback
+            if log_callback:
+                try: log_callback(line.rstrip())
+                except: pass
+                
+            # OCRmyPDF/Tesseract progress pattern
+            match = re.search(r'(?:INFO\s+-\s+|Page\s+|Scanning page\s+)(\d+)', line, re.IGNORECASE)
+            if match and progress_callback:
+                try: 
+                    progress_callback(int(match.group(1)))
+                except: pass
+    
+    rc = proc.poll()
+    out = proc.stdout.read()
+    err = "".join(stderr_output)
+    ACTIVE_PROCESS = None
+
+    if rc != 0:
+        if log_callback: log_callback(f"Command failed with RC {rc}")
+        logging.error(f"Command failed with RC {rc}: {cmd}")
+        logging.error(f"STDERR ({len(err)} chars): {err}")
+        raise subprocess.CalledProcessError(rc, cmd, output=out, stderr=err)
+    
+    return out, err
+
+def _run_ocr_single(input_path, output_path, force, options, progress_callback, log_callback=None):
+    """
+    Internal function to run OCR on a single file (not password protected).
+    """
+    # ... (Command builder omitted for brevity, logic remains same but passes log_callback)
+    # I need to verify I don't lose the cmd building logic.
+    # Actually, replacing THE WHOLE function _run_ocr_single is safer or I need to update just the call site.
+    # The previous prompt replaced definition only.
+    # I'll paste the definition + logic.
+    
+    # 1. Prepare Base CMD
+    base_cmd = ["ocrmypdf"]
+    if force: base_cmd.append("--force-ocr")
+    else: base_cmd.append("--skip-text")
+
+    # Important: Optimize for size and compatibility
+    base_cmd.extend(["--output-type", "pdf"])
+
+    if options:
+        if options.get("deskew"): base_cmd.append("--deskew")
+        if options.get("clean"): base_cmd.append("--clean")
+        if options.get("rotate"): base_cmd.append("--rotate-pages")
+        if options.get("optimize", "0") != "0": 
+            base_cmd.extend(["--optimize", options.get("optimize")])
+        
+        lang = options.get("language", "eng")
+        base_cmd.extend(["-l", lang])
+            
+    sidecar_file = output_path.replace(".pdf", ".txt")
+    base_cmd.extend(["--sidecar", sidecar_file])
+    base_cmd.append("-v") # Verbose for progress tracking
+
+    # Thread/Job Control
+    env = os.environ.copy()
+    safe_jobs = 1
+    if options:
+        safe_jobs = max(1, int(options.get("max_cpu_threads", 2)))
+    
+    env["OMP_THREAD_LIMIT"] = "1"
+    base_cmd.extend(["--jobs", str(safe_jobs)])
+
+    # GPU Setup
+    tess_cfg_path = None
+    use_gpu = options.get("use_gpu") if options else False
+    
+    # Internal execution helper with retry logic
+    def attempt_execution(is_gpu):
+        nonlocal tess_cfg_path
+        cmd = list(base_cmd)
+        
+        if is_gpu:
+            try:
+                # Create config file for Tesseract
+                temp_dir = os.path.dirname(output_path) if os.path.dirname(output_path) else tempfile.gettempdir()
+                tess_cfg_path = os.path.join(temp_dir, f"tess_gpu_config_{os.getpid()}.cfg")
+                with open(tess_cfg_path, "w") as f:
+                    # Enable OpenCL for Tesseract
+                    f.write("tessedit_enable_opencl 1\n")
+                cmd.extend(["--tesseract-config", tess_cfg_path])
+            except: 
+                pass # Proceed without config if write fails
+        
+        cmd.extend([input_path, output_path])
+        
+        try:
+            _run_cmd(cmd, env, progress_callback, log_callback) # Pass log_callback here
+        except subprocess.CalledProcessError as e:
+            raise e
+        finally:
+            if tess_cfg_path and os.path.exists(tess_cfg_path):
+                try: os.remove(tess_cfg_path)
+                except: pass
+
+    # Retry Logic: GPU -> CPU -> Sanitize/Flatten
+    try:
+        attempt_execution(use_gpu)
+    except subprocess.CalledProcessError as e:
+        if CANCEL_FLAG: raise OCRError("Process Cancelled")
+        
+        # 1. GPU Failed? -> Try CPU
+        if use_gpu:
+            if log_callback: log_callback("GPU failed. Retrying with CPU...")
+            logging.warning("GPU OCR mode failed. Retrying with CPU fallback...")
+            try:
+                attempt_execution(False)
+                return sidecar_file
+            except subprocess.CalledProcessError as e2:
+                if CANCEL_FLAG: raise OCRError("Process Cancelled")
+                last_error = e2
+        else:
+            last_error = e
+            
+        # 2. CPU Failed? -> Try Sanitizing
+        if log_callback: log_callback("Standard OCR failed. Attempting sanitize...")
+        logging.warning("Standard OCR failed. Attempting to sanitize PDF (Rasterize & Rebuild)...")
+        sanitized_path = input_path.replace(".pdf", "_clean.pdf")
+        
+        if _sanitize_pdf(input_path, sanitized_path):
+            try:
+                cmd = list(base_cmd)
+                cmd.extend([sanitized_path, output_path])
+                _run_cmd(cmd, env, progress_callback, log_callback)
+                return sidecar_file
+            except subprocess.CalledProcessError as e3:
+                err_text = e3.stderr if e3.stderr else str(e3)
+                raise OCRError(f"OCR Critical Fail (Sanitized): {err_text[-500:]}")
+            finally:
+                if os.path.exists(sanitized_path):
+                    try: os.remove(sanitized_path)
+                    except: pass
+        else:
+            err_text = last_error.stderr if last_error.stderr else str(last_error)
+            raise OCRError(f"OCR Failed: {err_text[-500:]}")
+
+    return sidecar_file
     """
     Internal function to run OCR on a single file (not password protected).
     """

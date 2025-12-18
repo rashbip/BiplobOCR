@@ -1,7 +1,7 @@
 {
     "theme": "dark",
     "language": "en",
-    "ocr_language": "ben",
+    "ocr_language": "eng",
     "last_used_ocr_languages": [
         "ben",
         "eng"
@@ -13,9 +13,5 @@
     "optimize": "0",
     "use_gpu": false,
     "gpu_device": "Auto",
-    "max_cpu_threads": 2,
-    "internal_packs": [
-        "osd",
-        "equ"
-    ]
+    "max_cpu_threads": 2
 }

@@ -166,7 +166,27 @@ class BiplobOCR(TkinterDnD.Tk):
         
         self.btn_cancel_global = ttk.Button(self.status_bar, text="🟥 STOP", command=self.cancel_processing, style="Danger.TButton")
         self.btn_cancel_global.pack(side="right", padx=10)
+        
+        self.btn_show_log = ttk.Button(self.status_bar, text="👁 See Process", command=self.open_log_view, style="TButton")
+        self.btn_show_log.pack(side="right", padx=5)
+        
+        self._init_views()
 
+    def open_log_view(self):
+        if hasattr(self, 'log_window') and self.log_window.winfo_exists():
+            self.log_window.lift()
+            return
+            
+        from .views.log_view import LogView
+        self.log_window = LogView(self)
+        self.log_window.protocol("WM_DELETE_WINDOW", self.close_log_view)
+
+    def close_log_view(self):
+        if hasattr(self, 'log_window'):
+            self.log_window.destroy()
+            del self.log_window
+
+    def _init_views(self):
         # Vars (Initialize BEFORE views)
         self.var_deskew = tk.BooleanVar(value=app_state.get_option("deskew"))
         self.var_clean = tk.BooleanVar(value=app_state.get_option("clean"))
@@ -179,6 +199,10 @@ class BiplobOCR(TkinterDnD.Tk):
         self.var_lang = tk.StringVar(value=app_state.get("language", "en"))
 
         # --- VIEWS ---
+        from .views.home_view import HomeView
+        from .views.batch_view import BatchView
+        from .views.history_view import HistoryView
+        
         self.view_home = HomeView(self.content_area, self)
         self.view_batch = BatchView(self.content_area, self)
         self.view_history = HistoryView(self.content_area, self)
@@ -256,7 +280,12 @@ class BiplobOCR(TkinterDnD.Tk):
             self.lbl_global_status.config(text="Stopping...")
         except: pass
 
-    def update_global_status_detail(self, val, page, total, start_time):
+    def log_bridge(self, msg):
+        """Passes log messages to the log window if active."""
+        if hasattr(self, 'log_window') and self.log_window.winfo_exists():
+            self.after(0, lambda: self.log_window.append_log(msg))
+
+    def update_global_status_detail(self, val, page, total, start_time, pdf_path=None):
         try:
             # Monotonic progress check
             if not hasattr(self, 'max_page_seen'): self.max_page_seen = 0
@@ -281,10 +310,14 @@ class BiplobOCR(TkinterDnD.Tk):
                     etr_str = f"{etr_seconds//60}m {etr_seconds%60}s"
                 
                 txt = f"Processing Page {page} of {total} ({int(real_val)}%) - ETR: {etr_str}"
-            else:
-                txt = f"Processing Page {page} of {total} ({int(real_val)}%)"
+                
+                # Update Status
+                self.lbl_global_status.config(text=txt)
 
-            self.lbl_global_status.config(text=txt)
+            # Update Log View Image
+            if hasattr(self, 'log_window') and self.log_window.winfo_exists() and pdf_path:
+                self.after(0, lambda: self.log_window.update_image(pdf_path, page - 1))
+
         except: pass
 
     # --- SINGLE SCAN ---
@@ -363,7 +396,10 @@ class BiplobOCR(TkinterDnD.Tk):
             def update_prog(p):
                 if total_pages > 0:
                     val = (p / total_pages) * 100
-                    self.after(0, lambda v=val, p=p, t=total_pages: self.update_global_status_detail(v, p, t, start_time))
+                    self.after(0, lambda v=val, p=p, t=total_pages: self.update_global_status_detail(v, p, t, start_time, self.current_pdf_path))
+            
+            def log_cb(msg):
+                self.log_bridge(msg)
             
             self.after(0, lambda: self.global_progress.config(mode="determinate", maximum=100, value=0))
             
@@ -373,7 +409,8 @@ class BiplobOCR(TkinterDnD.Tk):
                 self.current_pdf_password, 
                 self.var_force.get(),
                 options=opts,
-                progress_callback=update_prog
+                progress_callback=update_prog,
+                log_callback=log_cb
             )
             
             if self.stop_processing_flag: raise Exception("Process Cancelled")
@@ -531,13 +568,19 @@ class BiplobOCR(TkinterDnD.Tk):
                         self.after(0, lambda v=global_val, p=p, t=doc_total_pages, n=fname, idx=i+1, e=etr_str: 
                             self.update_batch_status_detail(v, idx, total_docs, n, p, t, e))
 
+                    if hasattr(self, 'log_window') and self.log_window.winfo_exists():
+                        self.after(0, lambda: self.log_window.update_image(fpath, p-1))
+
+                def log_cb(msg):
+                    self.log_bridge(msg)
+
                 pw = None
                 try: 
                     with pikepdf.open(fpath): pass
                 except: 
                     raise Exception("Password Required")
 
-                run_ocr(fpath, out_path, None, force=True, options=opts, progress_callback=batch_prog_cb)
+                run_ocr(fpath, out_path, None, force=True, options=opts, progress_callback=batch_prog_cb, log_callback=log_cb)
                 
                 if self.stop_processing_flag: raise Exception("Process Cancelled")
                      
