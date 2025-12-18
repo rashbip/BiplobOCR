@@ -36,6 +36,14 @@ class HistoryManager:
         self.history.insert(0, entry) # Prepend
         self.save_history()
 
+    def update_output_path(self, filename, new_path):
+        # Update specific item by filename (the most recent one usually)
+        for item in self.history:
+            if item["filename"] == filename:
+                item["output_path"] = new_path
+                self.save_history()
+                return
+
     def get_all(self):
         return self.history
 

@@ -690,8 +690,14 @@ class BiplobOCR(TkinterDnD.Tk):
         def save_pdf():
             f = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])
             if f:
-                shutil.copy(temp_out, f)
-                messagebox.showinfo("Saved", "PDF Saved!")
+                try:
+                    shutil.copy(temp_out, f)
+                    messagebox.showinfo("Saved", "PDF Saved!")
+                    # Update History with actual path
+                    fname = os.path.basename(self.current_pdf_path)
+                    history.update_output_path(fname, f)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Save failed: {e}")
         def save_txt():
             f = filedialog.asksaveasfilename(defaultextension=".txt")
             if f:
