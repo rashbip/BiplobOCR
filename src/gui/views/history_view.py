@@ -18,13 +18,6 @@ class HistoryView(ttk.Frame):
         ttk.Label(header, text=app_state.t("nav_history"), style="Header.TLabel").pack(side="left")
         ttk.Button(header, text=app_state.t("btn_clear_history"), command=self.confirm_clear_all, style="Danger.TButton").pack(side="right")
 
-        # Column Headers (Visual Only)
-        cols_frame = ttk.Frame(self, style="Card.TFrame", padding=5)
-        cols_frame.pack(fill="x")
-        ttk.Label(cols_frame, text=app_state.t("col_filename"), width=40, font=("Segoe UI", 9, "bold"), background=SURFACE_COLOR).pack(side="left", padx=10)
-        ttk.Label(cols_frame, text=app_state.t("col_date"), width=20, font=("Segoe UI", 9, "bold"), background=SURFACE_COLOR).pack(side="left")
-        ttk.Label(cols_frame, text="Actions", font=("Segoe UI", 9, "bold"), background=SURFACE_COLOR).pack(side="right", padx=20)
-        
         # Scrollable Area
         self.canvas = tk.Canvas(self, bg=SURFACE_COLOR, highlightthickness=0)
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
@@ -35,17 +28,26 @@ class HistoryView(ttk.Frame):
             lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         )
 
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw", width=1200) # Fixed width or adjust dynamic
+        # Store window id to update width later
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
         self.canvas.pack(side="left", fill="both", expand=True, pady=10)
         self.scrollbar.pack(side="right", fill="y", pady=10)
         
+        # Responsive Width Binding
+        self.canvas.bind('<Configure>', self._on_canvas_configure)
+
         # Mousewheel
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
         self.refresh()
         
+    def _on_canvas_configure(self, event):
+        # Update the width of the frame to fill the canvas
+        canvas_width = event.width
+        self.canvas.itemconfig(self.canvas_window, width=canvas_width)
+
     def _on_mousewheel(self, event):
         try:
             self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
@@ -59,13 +61,18 @@ class HistoryView(ttk.Frame):
         if not data:
             ttk.Label(self.scrollable_frame, text="No History Found", background=SURFACE_COLOR).pack(pady=20)
             return
-
+            
+        # Header Row (Inside scrollable frame or separate? separate is better for sticky header but let's put simple labels)
+        # Actually separate header is better, but since rows are responsive, columns might misalign if header is separate and static.
+        # For true responsiveness with aligned columns, grid is best. But simple "Name... ....... Date Status Action" works too.
+        # Let's keep it simple: Just rows.
+        
         for i, item in enumerate(data):
             self.create_history_row(i, item)
 
     def create_history_row(self, index, item):
         row = ttk.Frame(self.scrollable_frame, style="Card.TFrame", padding=(10, 5))
-        row.pack(fill="x", pady=2)
+        row.pack(fill="x", pady=2, padx=2) 
         
         # Data
         fname = item.get("filename", "Unknown")
@@ -74,22 +81,9 @@ class HistoryView(ttk.Frame):
         source = item.get("source_path")
         output = item.get("output_path")
         
-        # Shorten filename if needed
-        disp_name = (fname[:35] + '..') if len(fname) > 35 else fname
+        # Layout: [Name (Expand)] [Date (Fixed)] [Status (Fixed)] [Actions (Fixed)]
         
-        lbl_name = ttk.Label(row, text=disp_name, width=40, font=("Segoe UI", 10), background=SURFACE_COLOR)
-        lbl_name.pack(side="left", padx=10)
-        
-        lbl_date = ttk.Label(row, text=date_str, width=20, font=("Segoe UI", 9), foreground="gray", background=SURFACE_COLOR)
-        lbl_date.pack(side="left")
-        
-        lbl_status = ttk.Label(row, text=status, width=15, font=("Segoe UI", 9, "bold"), background=SURFACE_COLOR)
-        if "Success" in status or "Completed" in status: lbl_status.config(foreground="#4CAF50")
-        elif "Fail" in status: lbl_status.config(foreground="#F44336")
-        else: lbl_status.config(foreground="orange")
-        lbl_status.pack(side="left")
-
-        # Actions Panel
+        # Actions Panel (Right)
         actions = ttk.Frame(row, style="Card.TFrame")
         actions.pack(side="right", padx=10)
 
@@ -114,7 +108,6 @@ class HistoryView(ttk.Frame):
         btn_out = tk.Button(actions, text="👁 View", font=("Segoe UI", 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
         btn_out.pack(side="left", padx=2)
         
-        # Disable output button if not success or path missing
         if not output:
             btn_out.config(state="disabled", bg="#2a2a2a", fg="gray", cursor="arrow")
 
@@ -127,6 +120,23 @@ class HistoryView(ttk.Frame):
 
         btn_del = tk.Button(actions, text="🗑", font=("Segoe UI", 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
         btn_del.pack(side="left", padx=2)
+        
+        # Status (Before Actions)
+        lbl_status = ttk.Label(row, text=status, width=15, font=("Segoe UI", 9, "bold"), background=SURFACE_COLOR)
+        if "Success" in status or "Completed" in status: lbl_status.config(foreground="#4CAF50")
+        elif "Fail" in status: lbl_status.config(foreground="#F44336")
+        else: lbl_status.config(foreground="orange")
+        lbl_status.pack(side="right", padx=10)
+        
+        # Date (Before Status)
+        lbl_date = ttk.Label(row, text=date_str, width=20, font=("Segoe UI", 9), foreground="gray", background=SURFACE_COLOR)
+        lbl_date.pack(side="right", padx=10)
+        
+        # Name (Left, Expand)
+        # Dynamic truncation could be hard with pure Label, but let's try just letting it cut off or wrap
+        # But user wants responsive. 
+        lbl_name = ttk.Label(row, text=fname, font=("Segoe UI", 10), background=SURFACE_COLOR)
+        lbl_name.pack(side="left", fill="x", expand=True, padx=10)
 
     def confirm_clear_all(self):
         if messagebox.askyesno("Confirm", "Clear entire history log?"):

@@ -1,6 +1,7 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from tkinterdnd2 import DND_FILES
+import os
 from ...core.history_manager import history
 from ...core.theme import SURFACE_COLOR, THEME_COLOR
 from ...core.config_manager import state as app_state
@@ -52,24 +53,79 @@ class HomeView(ttk.Frame):
             
         ttk.Button(c2_inner, text=app_state.t("btn_open_batch"), style="Accent.TButton", command=open_batch_diag).pack(pady=20, ipadx=10, ipady=5)
 
-        # Recent Documents
+        # Recent Documents (Cards)
         ttk.Label(self, text=app_state.t("home_recent"), font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
         
-        cols = ("Filename", "Date", "Status")
-        self.tree_recent = ttk.Treeview(self, columns=cols, show="headings", height=6)
-        self.tree_recent.pack(fill="both", expand=True)
-        self.tree_recent.heading("Filename", text=app_state.t("col_filename"))
-        self.tree_recent.heading("Date", text=app_state.t("col_date"))
-        self.tree_recent.heading("Status", text=app_state.t("col_status"))
-        self.tree_recent.column("Filename", width=300)
-        self.tree_recent.column("Date", width=150)
-        self.tree_recent.column("Status", width=100)
+        self.recent_container = ttk.Frame(self)
+        self.recent_container.pack(fill="both", expand=True)
         
         self.refresh_recent_docs()
 
     def refresh_recent_docs(self):
-        for item in self.tree_recent.get_children(): self.tree_recent.delete(item)
+        for widget in self.recent_container.winfo_children(): widget.destroy()
+        
         data = history.get_all()
+        if not data:
+            ttk.Label(self.recent_container, text="No recent activity", foreground="gray").pack(anchor="w", pady=10)
+            return
+
         for i, item in enumerate(data):
             if i >= 5: break
-            self.tree_recent.insert("", "end", values=(item["filename"], item["date"], item["status"]))
+            self.create_mini_history_row(i, item)
+            
+    def create_mini_history_row(self, index, item):
+        row = ttk.Frame(self.recent_container, style="Card.TFrame", padding=10)
+        row.pack(fill="x", pady=2)
+        
+        fname = item.get("filename", "Unknown")
+        date_str = item.get("date", "")
+        status = item.get("status", "")
+        source = item.get("source_path")
+        output = item.get("output_path")
+        
+        # Info
+        info_frame = ttk.Frame(row, style="Card.TFrame")
+        info_frame.pack(side="left", fill="x", expand=True)
+        
+        ttk.Label(info_frame, text=fname, font=("Segoe UI", 10, "bold"), background=SURFACE_COLOR).pack(anchor="w")
+        
+        meta_txt = f"{date_str} • {status}"
+        lbl_meta = ttk.Label(info_frame, text=meta_txt, font=("Segoe UI", 9), background=SURFACE_COLOR, foreground="gray")
+        lbl_meta.pack(anchor="w")
+        
+        # Actions
+        actions = ttk.Frame(row, style="Card.TFrame")
+        actions.pack(side="right")
+        
+        # 1. Source System
+        def open_src():
+            if source and os.path.exists(source):
+                self.controller.open_dropped_pdf(source)
+            else:
+                messagebox.showerror("Error", "Source file not found.")
+
+        btn_src = tk.Button(actions, text="📄 Src", font=("Segoe UI", 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
+        btn_src.pack(side="left", padx=2)
+        if not source: btn_src.config(state="disabled", bg="#2a2a2a", fg="gray")
+        
+        # 2. Output Open
+        def open_out():
+            if output and os.path.exists(output):
+                self.controller.open_dropped_pdf(output)
+            else:
+                messagebox.showerror("Error", "Output file not found.")
+
+        btn_out = tk.Button(actions, text="👁 View", font=("Segoe UI", 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
+        btn_out.pack(side="left", padx=2)
+        if not output: btn_out.config(state="disabled", bg="#2a2a2a", fg="gray", cursor="arrow")
+
+        # 3. Delete
+        def delete_me():
+            if messagebox.askyesno("Delete", f"Delete history for {fname}?"):
+                # We need to find the correct index in standard history
+                # Since we are iterating 0..5 of get_all(), the 'index' passed in is correct
+                history.delete_entry(index)
+                self.refresh_recent_docs()
+
+        btn_del = tk.Button(actions, text="🗑", font=("Segoe UI", 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
+        btn_del.pack(side="left", padx=2)
