@@ -239,7 +239,7 @@ def _run_cmd(cmd, env, progress_callback=None):
     
     return out, err
 
-def run_ocr(input_path, output_path, password=None, force=False, options=None, progress_callback=None, log_callback=None):
+def run_ocr(input_path, output_path, password=None, force=False, options=None, progress_callback=None, log_callback=None, text_callback=None):
     """
     Executes OCRmyPDF on the input file.
     
@@ -296,11 +296,11 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
             logging.info(f"Large PDF detected ({total_pages} pages). Engaging chunking mode...")
             return _run_ocr_chunked(
                 working_input, output_path, total_pages, CHUNK_SIZE, 
-                force, options, progress_callback, log_callback
+                force, options, progress_callback, log_callback, text_callback
             )
         else:
             # --- STANDARD SINGLE FILE PROCESS ---
-            return _run_ocr_single(working_input, output_path, force, options, progress_callback, log_callback)
+            return _run_ocr_single(working_input, output_path, force, options, progress_callback, log_callback, text_callback)
             
     except OCRError as e:
         raise e
@@ -312,7 +312,7 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
             try: os.remove(decrypted_temp)
             except: pass
 
-def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, options, progress_callback, log_callback):
+def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, options, progress_callback, log_callback, text_callback):
     """
     Splits PDF into chunks, OCRs them individually, and merges them back.
     """
@@ -356,7 +356,11 @@ def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, op
             logging.info(f"Processing chunk {i+1}/{len(chunk_files)}...")
             
             # Recursive call to single runner
-            _run_ocr_single(c_path, c_out, force, options, chunk_progress_wrapper, log_callback)
+            # Note: We pass text_callback=None here to avoid double-reading? 
+            # OR we pass it, and let single runner read it.
+            # If we pass it, single runner reads it.
+            # If single runner reads it, we get text per chunk. Perfect.
+            _run_ocr_single(c_path, c_out, force, options, chunk_progress_wrapper, log_callback, text_callback)
             processed_chunks.append(c_out)
             
         # 3. Merge Results
@@ -444,7 +448,7 @@ def _run_cmd(cmd, env, progress_callback=None, log_callback=None):
     
     return out, err
 
-def _run_ocr_single(input_path, output_path, force, options, progress_callback, log_callback=None):
+def _run_ocr_single(input_path, output_path, force, options, progress_callback, log_callback=None, text_callback=None):
     """
     Internal function to run OCR on a single file (not password protected).
     """
@@ -619,7 +623,7 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
         cmd.extend([input_path, output_path])
         
         try:
-            _run_cmd(cmd, env, progress_callback)
+            _run_cmd(cmd, env, progress_callback, log_callback)
         except subprocess.CalledProcessError as e:
             raise e
         finally:
@@ -639,6 +643,11 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
             logging.warning("GPU OCR mode failed. Retrying with CPU fallback...")
             try:
                 attempt_execution(False)
+                if text_callback and os.path.exists(sidecar_file):
+                    try:
+                        with open(sidecar_file, "r", encoding="utf-8", errors="ignore") as f:
+                            text_callback(f.read())
+                    except: pass
                 return sidecar_file
             except subprocess.CalledProcessError as e2:
                 if CANCEL_FLAG: raise OCRError("Process Cancelled")
@@ -661,9 +670,14 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
                 cmd.extend([sanitized_path, output_path])
                 
                 # Run with CPU env for safety
-                _run_cmd(cmd, env, progress_callback)
+                _run_cmd(cmd, env, progress_callback, log_callback)
                 
                 # If success, return sidecar
+                if text_callback and os.path.exists(sidecar_file):
+                    try:
+                        with open(sidecar_file, "r", encoding="utf-8", errors="ignore") as f:
+                            text_callback(f.read())
+                    except: pass
                 return sidecar_file
                 
             except subprocess.CalledProcessError as e3:
@@ -678,6 +692,12 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
             # Sanitization couldn't run (e.g. no fitz), raise original error
             err_text = last_error.stderr if last_error.stderr else str(last_error)
             raise OCRError(f"OCR Failed: {err_text[-500:]}")
+
+    if text_callback and os.path.exists(sidecar_file):
+        try:
+            with open(sidecar_file, "r", encoding="utf-8", errors="ignore") as f:
+                text_callback(f.read())
+        except: pass
 
     return sidecar_file
 

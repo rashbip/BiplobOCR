@@ -20,16 +20,30 @@ class LogView(tk.Toplevel):
         self.lbl_img = ttk.Label(self.frame_img, text="Waiting for process...", anchor="center")
         self.lbl_img.pack(fill="both", expand=True)
         
-        # Right: Log/Text
-        self.frame_log = ttk.LabelFrame(paned, text="Live Log / Extraction", padding=10)
+        # Middle: Log/Text
+        self.frame_log = ttk.LabelFrame(paned, text="Live Log", padding=10)
         paned.add(self.frame_log, weight=1)
         
         self.txt_log = tk.Text(self.frame_log, background="#1e1e1e", foreground="#d4d4d4", font=("Consolas", 10), state="disabled", wrap="word")
         self.txt_log.pack(side="left", fill="both", expand=True)
         
-        scroll = ttk.Scrollbar(self.frame_log, command=self.txt_log.yview)
-        scroll.pack(side="right", fill="y")
-        self.txt_log.config(yscrollcommand=scroll.set)
+        scroll_log = ttk.Scrollbar(self.frame_log, command=self.txt_log.yview)
+        scroll_log.pack(side="right", fill="y")
+        self.txt_log.config(yscrollcommand=scroll_log.set)
+        
+        # Right: Extracted Text
+        self.frame_text = ttk.LabelFrame(paned, text="Extracted Text (Real-time)", padding=10)
+        paned.add(self.frame_text, weight=1)
+        
+        self.txt_text = tk.Text(self.frame_text, background="#1e1e1e", foreground="#d4d4d4", font=("Segoe UI", 10), state="disabled", wrap="word")
+        self.txt_text.pack(side="left", fill="both", expand=True)
+        
+        # Initial placeholder
+        self.append_text("Text will appear here as pages are completed...")
+        
+        scroll_text = ttk.Scrollbar(self.frame_text, command=self.txt_text.yview)
+        scroll_text.pack(side="right", fill="y")
+        self.txt_text.config(yscrollcommand=scroll_text.set)
         
         # State
         self.current_img = None
@@ -63,8 +77,19 @@ class LogView(tk.Toplevel):
         self.txt_log.see("end")
         self.txt_log.config(state="disabled")
 
+    def append_text(self, text):
+        self.txt_text.config(state="normal")
+        self.txt_text.insert("end", text + "\n\n")
+        self.txt_text.see("end")
+        self.txt_text.config(state="disabled")
+
     def clear(self):
         self.txt_log.config(state="normal")
         self.txt_log.delete("1.0", "end")
         self.txt_log.config(state="disabled")
+        
+        self.txt_text.config(state="normal")
+        self.txt_text.delete("1.0", "end")
+        self.txt_text.config(state="disabled")
+        
         self.lbl_img.configure(image="", text="Waiting...")

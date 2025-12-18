@@ -1,5 +1,21 @@
 [
     {
+        "filename": "new.pdf",
+        "date": "2025-12-18 21:30:32",
+        "size": "7.7 MB",
+        "status": "Completed",
+        "source_path": "C:/Users/biplo/Downloads/new.pdf",
+        "output_path": "C:\\Users\\biplo\\AppData\\Local\\Temp\\BiplobOCR_Temp\\processed_output.pdf"
+    },
+    {
+        "filename": "biplob_ocr_selected_pages - Copy - Copy - Copy.pdf",
+        "date": "2025-12-18 21:29:12",
+        "size": "7.7 MB",
+        "status": "Completed",
+        "source_path": "C:/Users/biplo/Downloads/biplob_ocr_selected_pages - Copy - Copy - Copy.pdf",
+        "output_path": "C:\\Users\\biplo\\AppData\\Local\\Temp\\BiplobOCR_Temp\\processed_output.pdf"
+    },
+    {
         "filename": "selected_pages - Copy - Copy - Copy (3).pdf",
         "date": "2025-12-18 21:19:15",
         "size": "1.1 MB",
