@@ -28,6 +28,7 @@ except ImportError:
 
 # Store active process for cancellation
 ACTIVE_PROCESS = None
+CANCEL_FLAG = False
 
 class OCRError(Exception):
     """Custom Exception for OCR errors to provide better user feedback."""
@@ -81,7 +82,9 @@ def cancel_ocr():
     """
     Terminates the currently running OCR process and its children.
     """
-    global ACTIVE_PROCESS
+    global ACTIVE_PROCESS, CANCEL_FLAG
+    CANCEL_FLAG = True
+    
     if ACTIVE_PROCESS:
         try:
             logging.info(f"Terminating process: {ACTIVE_PROCESS.pid}")
@@ -213,6 +216,8 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
     Returns:
         str: Path to the sidecar text file generated.
     """
+    global CANCEL_FLAG
+    CANCEL_FLAG = False
     
     # 1. Setup & Decryption
     working_input = input_path
@@ -294,6 +299,9 @@ def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, op
         
         # 2. Process Each Chunk
         for i, (c_path, offset) in enumerate(chunk_files):
+            if CANCEL_FLAG: 
+                raise OCRError("Process Cancelled")
+
             c_out = c_path.replace(".pdf", "_ocr.pdf")
             
             # Wrapper for progress callback to map chunk page -> global page
@@ -404,20 +412,82 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback):
                 try: os.remove(tess_cfg_path)
                 except: pass
 
-    # Retry Logic: GPU -> CPU
+    # Retry Logic: GPU -> CPU -> Sanitize/Flatten
     try:
         attempt_execution(use_gpu)
     except subprocess.CalledProcessError as e:
+        if CANCEL_FLAG: raise OCRError("Process Cancelled")
+        
+        # 1. GPU Failed? -> Try CPU
         if use_gpu:
             logging.warning("GPU OCR mode failed. Retrying with CPU fallback...")
             try:
-                attempt_execution(False) 
+                attempt_execution(False)
+                return sidecar_file
             except subprocess.CalledProcessError as e2:
-                # Capture stderr for meaningful error
-                err_text = e2.stderr if e2.stderr else str(e2)
-                raise OCRError(f"OCR Failed (CPU Retrieval): {err_text[-500:]}")
+                if CANCEL_FLAG: raise OCRError("Process Cancelled")
+                last_error = e2
         else:
-            err_text = e.stderr if e.stderr else str(e)
+            last_error = e
+            
+        # 2. CPU Failed? -> Try Sanitizing (Flattening to Image)
+        # This fixes "JPEG data is corrupt" or "Invalid PDF" errors
+        logging.warning("Standard OCR failed. Attempting to sanitize PDF (Rasterize & Rebuild)...")
+        sanitized_path = input_path.replace(".pdf", "_clean.pdf")
+        
+        if _sanitize_pdf(input_path, sanitized_path):
+            try:
+                # We must update the cmd to use the new input
+                # Note: We can't easily swap input in the closure, so we call recursively or copy logic.
+                # Simplest is to copy logic for this fallback:
+                
+                cmd = list(base_cmd)
+                cmd.extend([sanitized_path, output_path])
+                
+                # Run with CPU env for safety
+                _run_cmd(cmd, env, progress_callback)
+                
+                # If success, return sidecar
+                return sidecar_file
+                
+            except subprocess.CalledProcessError as e3:
+                # If even sanitized fails, raise the original or new error
+                err_text = e3.stderr if e3.stderr else str(e3)
+                raise OCRError(f"OCR Critical Fail (Sanitized): {err_text[-500:]}")
+            finally:
+                if os.path.exists(sanitized_path):
+                    try: os.remove(sanitized_path)
+                    except: pass
+        else:
+            # Sanitization couldn't run (e.g. no fitz), raise original error
+            err_text = last_error.stderr if last_error.stderr else str(last_error)
             raise OCRError(f"OCR Failed: {err_text[-500:]}")
 
     return sidecar_file
+
+def _sanitize_pdf(input_path, output_path):
+    """
+    Rebuilds a PDF by converting pages to images and back.
+    Fixes corrupt streams/JPEGs that crash OCRmyPDF.
+    """
+    if not fitz: return False
+    try:
+        doc = fitz.open(input_path)
+        new_doc = fitz.open()
+        
+        for i, page in enumerate(doc):
+            # Render page to image (300 DPI for good OCR quality)
+            pix = page.get_pixmap(dpi=300)
+            img_bytes = pix.tobytes("jpg", jpg_quality=95)
+            
+            # Create new page in new doc
+            new_page = new_doc.new_page(width=page.rect.width, height=page.rect.height)
+            new_page.insert_image(page.rect, stream=img_bytes)
+            
+        new_doc.save(output_path)
+        new_doc.close()
+        doc.close()
+        return True
+    except Exception as e:
+        logging.error(f"PDF Sanitization failed: {e}")
+        return False

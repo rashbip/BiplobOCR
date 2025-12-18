@@ -2,3 +2,4 @@ pikepdf
 ocrmypdf
 PyMuPDF
 Pillow
+tkinterdnd2

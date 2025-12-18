@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinterdnd2 import DND_FILES
 from ...core.history_manager import history
 from ...core.theme import SURFACE_COLOR, THEME_COLOR
 from ...core.config_manager import state as app_state
@@ -8,7 +9,16 @@ class HomeView(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, padding=40)
         self.controller = controller
+        
         self.build_ui()
+        
+        # Drag & Drop Registration
+        self.drop_target_register(DND_FILES)
+        self.dnd_bind('<<Drop>>', self.on_drop)
+        
+    def on_drop(self, event):
+        if event.data:
+            self.controller.open_dropped_pdf(event.data)
 
     def build_ui(self):
         ttk.Label(self, text=app_state.t("home_welcome"), style="Header.TLabel").pack(anchor="w")

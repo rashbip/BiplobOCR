@@ -1,6 +1,6 @@
-
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinterdnd2 import DND_FILES, TkinterDnD
 import shutil
 import time
 import pikepdf
@@ -23,7 +23,7 @@ from .views.batch_view import BatchView
 from .views.history_view import HistoryView
 from ..core import gpu_manager
 
-class BiplobOCR(tk.Tk):
+class BiplobOCR(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
         self.withdraw()
@@ -589,6 +589,53 @@ class BiplobOCR(tk.Tk):
         self.btn_process.config(state="normal")
         self.success_frame.place_forget()
         self.lbl_status.config(text=f"Loaded: {os.path.basename(pdf)}")
+
+    def open_dropped_pdf(self, file_path):
+        # TkinterDnD might return paths in curly braces {file.pdf} if spaces exist
+        file_path = file_path.strip('{}')
+        if not file_path.lower().endswith('.pdf'):
+            messagebox.showerror("Error", "Only PDF files are supported.")
+            return
+
+        self.current_pdf_path = file_path
+        self.switch_tab("scan")
+        
+        password = None
+        try: 
+            with pikepdf.open(file_path): pass
+        except pikepdf.PasswordError:
+            password = simpledialog.askstring("Password", "Enter PDF Password:", show="*")
+            if not password: return
+        
+        self.current_pdf_password = password
+        self.viewer.load_pdf(file_path, password)
+        self.btn_process.config(state="normal")
+        self.lbl_status.config(text=f"Loaded: {os.path.basename(file_path)}")
+
+    def add_dropped_batch_files(self, file_paths):
+        # TkinterDnD passes a string of paths, potentially with braces
+        # We need to parse this string carefully.
+        # Simple split is risky if spaces are present, but DnD returns {path with space} path_no_space
+        
+        # Robust parsing of TkinterDnD file list
+        if isinstance(file_paths, str):
+            # If it's a single string like "{C:/A B/foo.pdf} C:/baz.pdf", we need to split it
+            raw_paths = self.tk.splitlist(file_paths)
+        else:
+            raw_paths = file_paths
+            
+        if not hasattr(self, 'batch_files'): self.batch_files = []
+        
+        count = 0
+        for f in raw_paths:
+            if f.lower().endswith('.pdf'):
+                if any(bf["path"] == f for bf in self.batch_files): continue
+                item_id = self.batch_tree.insert("", "end", values=(os.path.basename(f), "Pending"))
+                self.batch_files.append({"path": f, "id": item_id, "status": "Pending"})
+                count += 1
+        
+        if count > 0:
+            messagebox.showinfo("Files Added", f"Added {count} files to batch.")
 
     def show_success_ui(self, temp_out, sidecar):
         self.success_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
