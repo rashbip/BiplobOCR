@@ -1,25 +1,16 @@
 {
     "theme": "dark",
-    "language": "en",
-    "ocr_language": "ben",
+    "language": "bn",
+    "ocr_language": "equ",
     "last_used_ocr_languages": [
-        "eng",
-        "hin"
+        "eng"
     ],
     "deskew": false,
     "clean": false,
-    "rotate": false,
-    "force": true,
-    "optimize": "1",
+    "rotate": true,
+    "force": false,
+    "optimize": "0",
     "use_gpu": false,
-    "gpu_device": "AMD Radeon RX 580 2048SP",
-    "max_cpu_threads": 4,
-    "xml_type": "hocr",
-    "ocr_options": {
-        "deskew": false,
-        "clean": false,
-        "rotate": false,
-        "force": true,
-        "optimize": "0"
-    }
+    "gpu_device": "Auto",
+    "max_cpu_threads": 2
 }

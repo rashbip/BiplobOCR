@@ -5,6 +5,7 @@ import shutil
 import time
 import pikepdf
 import os
+import sys
 import subprocess
 import threading
 import fitz  # PyMuPDF
@@ -575,7 +576,7 @@ class BiplobOCR(TkinterDnD.Tk):
 
         # Multi-Select Languages
         lang_frame = ttk.LabelFrame(self.scan_sidebar, text="Processing Languages", padding=10)
-        lang_frame.pack(fill="both", expand=True, pady=10)
+        lang_frame.pack(fill="x", pady=10) # Removed expand=True to keep it compact
         
         # Load available and previously selected
         from ..core.ocr_engine import get_available_languages
@@ -583,8 +584,8 @@ class BiplobOCR(TkinterDnD.Tk):
         last_used = app_state.get("last_used_ocr_languages")
         if not last_used: last_used = [app_state.get("ocr_language", "eng")]
         
-        # Scrollable container for langs
-        lc = tk.Canvas(lang_frame, bg=SURFACE_COLOR, highlightthickness=0)
+        # Scrollable container for langs with FIXED HEIGHT
+        lc = tk.Canvas(lang_frame, bg=SURFACE_COLOR, highlightthickness=0, height=120) 
         ls = ttk.Scrollbar(lang_frame, orient="vertical", command=lc.yview)
         lf = ttk.Frame(lc, style="Card.TFrame")
         
@@ -592,13 +593,14 @@ class BiplobOCR(TkinterDnD.Tk):
         lc.create_window((0, 0), window=lf, anchor="nw")
         lc.configure(yscrollcommand=ls.set)
         
-        lc.pack(side="left", fill="both", expand=True)
+        lc.pack(side="left", fill="x", expand=True) # Fill width
         ls.pack(side="right", fill="y")
         
         self.scan_lang_vars = {}
         for l in avail:
             var = tk.BooleanVar(value=(l in last_used))
-            ttk.Checkbutton(lf, text=l, variable=var).pack(anchor="w")
+            btn = ttk.Checkbutton(lf, text=l, variable=var)
+            btn.pack(anchor="w")
             self.scan_lang_vars[l] = var
 
         self.btn_process = ttk.Button(self.scan_sidebar, text=app_state.t("btn_process"), command=self.start_processing_thread, state="disabled", style="Accent.TButton")
@@ -612,11 +614,35 @@ class BiplobOCR(TkinterDnD.Tk):
         self.success_frame = ttk.Frame(self.viewer_container, style="Card.TFrame", padding=20)
 
     def build_settings_view(self):
-        lbl = ttk.Label(self.view_settings, text=app_state.t("settings_title"), font=("Segoe UI", 20, "bold"))
+        # Create Scrollable Container
+        canvas = tk.Canvas(self.view_settings, bg=BG_COLOR, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.view_settings, orient="vertical", command=canvas.yview)
+        self.settings_scroll_frame = ttk.Frame(canvas)
+        
+        self.settings_scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        window_id = canvas.create_window((0, 0), window=self.settings_scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Ensure full width
+        canvas.bind('<Configure>', lambda e: canvas.itemconfig(window_id, width=e.width))
+        
+        # Enable Mousewheel Scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        # Bind mousewheel to canvas and all descendants (recursively if needed, but binding to canvas + frame is usually enough if they have focus or pointer is over them)
+        # However, for simplicity in Tkinter, binding to the canvas and ensuring it catches events is key.
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # Build UI into settings_scroll_frame
+        lbl = ttk.Label(self.settings_scroll_frame, text=app_state.t("settings_title"), font=("Segoe UI", 20, "bold"))
         lbl.pack(anchor="w", pady=(0, 20))
         
         # Hardware Config
-        f_hw = ttk.LabelFrame(self.view_settings, text=app_state.t("lbl_hw_settings"), padding=20)
+        f_hw = ttk.LabelFrame(self.settings_scroll_frame, text=app_state.t("lbl_hw_settings"), padding=20)
         f_hw.pack(fill="x", pady=10)
         
         # GPU Selection
@@ -636,7 +662,7 @@ class BiplobOCR(TkinterDnD.Tk):
         s_threads.pack(fill="x", pady=5)
         
         # Lang
-        f_lang = ttk.LabelFrame(self.view_settings, text=app_state.t("lbl_lang"), padding=20)
+        f_lang = ttk.LabelFrame(self.settings_scroll_frame, text=app_state.t("lbl_lang"), padding=20)
         f_lang.pack(fill="x", pady=10)
         
         # 1. Interface Language
@@ -683,6 +709,29 @@ class BiplobOCR(TkinterDnD.Tk):
         self.cb_ocr_lang.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
         cb_gpu.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
         s_threads.bind("<ButtonRelease-1>", lambda e: self.save_settings_inline())
+        
+        # Danger Zone
+        ttk.Separator(self.settings_scroll_frame, orient="horizontal").pack(fill="x", pady=30)
+        
+        f_danger = ttk.LabelFrame(self.settings_scroll_frame, text="Danger Zone", padding=20)
+        f_danger.pack(fill="x", pady=(0, 20))
+        
+        ttk.Label(f_danger, text="Reset application to factory defaults. This cannot be undone.", foreground="#ff5555").pack(anchor="w")
+        ttk.Button(f_danger, text="⚠ Factory Reset", style="Danger.TButton", command=self.factory_reset).pack(anchor="w", pady=(10, 0))
+
+    def factory_reset(self):
+        print("Factory reset triggered") # Debug
+        if messagebox.askyesno("Factory Reset", "Are you sure you want to reset all settings and data?"):
+            try:
+                if os.path.exists("config.json"): os.remove("config.json")
+                if os.path.exists("history.json"): os.remove("history.json")
+                if os.path.exists("history.json"): os.remove("history.json") # Duplicate check? Safe
+                
+                messagebox.showinfo("Reset Complete", "Application will now restart.")
+                self.restart_application(force=True)
+                
+            except Exception as e:
+                messagebox.showerror("Error", f"Reset failed: {e}")
 
     def refresh_data_packs_ui(self):
         for w in self.packs_scroll_frame.winfo_children(): w.destroy()
@@ -774,6 +823,25 @@ class BiplobOCR(TkinterDnD.Tk):
         except Exception as e:
             messagebox.showerror("Error", f"Failed to install data pack: {e}")
 
+    def restart_application(self, force=False):
+        """Restart the application safely."""
+        if not force:
+            if not messagebox.askyesno("Restart", "The application needs to restart to apply changes.\n\nRestart now?"):
+                return
+
+        try:
+            self.quit() # Stop mainloop
+            self.destroy() # Destroy window
+        except: pass
+        
+        # Relaunch
+        try:
+            subprocess.Popen([sys.executable] + sys.argv)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to restart: {e}")
+        finally:
+            sys.exit()
+
     def save_settings_inline(self):
         old_lang = app_state.get("language")
         new_lang = self.var_lang.get()
@@ -786,7 +854,9 @@ class BiplobOCR(TkinterDnD.Tk):
             "max_cpu_threads": self.var_cpu_threads.get()
         }
         app_state.save_config(new_conf)
-        if old_lang != new_lang: messagebox.showinfo("Restart", app_state.t("msg_restart"))
+        
+        if old_lang != new_lang: 
+            self.restart_application()
 
     # --- Actions ---
     def open_pdf(self):

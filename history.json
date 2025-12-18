@@ -1,26 +1,10 @@
 [
     {
         "filename": "selected_pages - Copy - Copy - Copy (3).pdf",
-        "date": "2025-12-18 18:58:47",
-        "size": "2.2 MB",
+        "date": "2025-12-18 19:22:35",
+        "size": "1.1 MB",
         "status": "Completed",
         "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy (3).pdf",
         "output_path": "C:\\Users\\biplo\\AppData\\Local\\Temp\\BiplobOCR_Temp\\processed_output.pdf"
-    },
-    {
-        "filename": "selected_pages - Copy - Copy - Copy (3).pdf",
-        "date": "2025-12-18 18:54:34",
-        "size": "2.2 MB",
-        "status": "Completed",
-        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy (3).pdf",
-        "output_path": "C:/Users/biplo/Downloads/ll.pdf"
-    },
-    {
-        "filename": "selected_pages - Copy - Copy - Copy (3).pdf",
-        "date": "2025-12-18 18:50:36",
-        "size": "N/A",
-        "status": "Failed",
-        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy (3).pdf",
-        "output_path": null
     }
 ]
