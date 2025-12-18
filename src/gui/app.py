@@ -12,7 +12,7 @@ from PIL import Image, ImageTk
 
 # Local imports
 from ..core.constants import APP_NAME, TEMP_DIR
-from ..core.ocr_engine import detect_pdf_type, run_ocr, run_tesseract_export, cancel_ocr
+from ..core.ocr_engine import detect_pdf_type, run_ocr, cancel_ocr
 from ..core.config_manager import state as app_state
 from ..core.history_manager import history
 from .pdf_viewer import PDFViewer

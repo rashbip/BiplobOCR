@@ -6,25 +6,61 @@ import re
 import shutil
 import tempfile
 import sys
+import math
+import logging
 from .constants import APP_NAME, TEMP_DIR
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+# Try importing dependencies safely to avoid immediate crashes
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
+    logging.warning("PyMuPDF (fitz) not found. PDF detection may be limited.")
+
+try:
+    import pikepdf
+except ImportError:
+    pikepdf = None
+    logging.warning("pikepdf not found. PDF operations will be restricted.")
 
 # Store active process for cancellation
 ACTIVE_PROCESS = None
 
-def detect_pdf_type(file_path):
+class OCRError(Exception):
+    """Custom Exception for OCR errors to provide better user feedback."""
+    pass
+
+def detect_pdf_type(file_path, password=None):
     """
-    Check if PDF is text-based (Digital) or scanned images.
-    Returns: 'text', 'image', or 'mixed'
+    Check if PDF is text-based (Digital), scanned images, or encrypted.
+    Returns: 'text', 'image', 'mixed', 'encrypted', or 'unknown'
     """
+    if not fitz:
+        return 'unknown'
+
     try:
-        # pip install pymupdf
-        import fitz 
         doc = fitz.open(file_path)
         
+        if doc.is_encrypted:
+            if password:
+                try:
+                    doc.authenticate(password)
+                except:
+                    return 'encrypted' # Auth failed
+            else:
+                return 'encrypted'
+
         has_text = False
         has_images = False
         
-        for page in doc:
+        # Check first 10 pages to save time on huge docs, or all if small
+        check_pages = min(len(doc), 15)
+        
+        for i in range(check_pages):
+            page = doc[i]
             if page.get_text().strip():
                 has_text = True
             if page.get_images():
@@ -34,25 +70,21 @@ def detect_pdf_type(file_path):
         
         if has_text and not has_images: return 'text'
         if has_images and not has_text: return 'image'
-        return 'mixed'
+        if has_text and has_images: return 'mixed'
+        return 'image' # Default to image if empty?
         
-    except ImportError:
-        return 'unknown' # Fallback if pymupdf missing
-    except:
+    except Exception as e:
+        logging.error(f"Error detecting PDF type: {e}")
         return 'unknown'
 
-def run_tesseract_export(pdf_path, output_txt):
-    """
-    Running tesseract directly just to extract text is complex for PDFs.
-    Better used for Images. For PDFs, we rely on ocrmypdf sidecar.
-    """
-    pass
-
 def cancel_ocr():
+    """
+    Terminates the currently running OCR process and its children.
+    """
     global ACTIVE_PROCESS
     if ACTIVE_PROCESS:
         try:
-            print(f"Terminating process: {ACTIVE_PROCESS.pid}")
+            logging.info(f"Terminating process: {ACTIVE_PROCESS.pid}")
             
             # Kill the entire process tree to ensure Tesseract/Ghostscript also die
             if os.name == 'nt':
@@ -60,26 +92,258 @@ def cancel_ocr():
                 subprocess.run(["taskkill", "/F", "/T", "/PID", str(ACTIVE_PROCESS.pid)], 
                                creationflags=subprocess.CREATE_NO_WINDOW)
             else:
-                # Unix: Kill progress group
+                # Unix: Kill process group
                 os.killpg(os.getpgid(ACTIVE_PROCESS.pid), signal.SIGTERM)
                 
             ACTIVE_PROCESS = None
         except Exception as e:
-            print(f"Error killing process: {e}")
+            logging.error(f"Error killing process: {e}")
+
+def _decrypt_pdf(input_path, password):
+    """
+    Decrypts a PDF using pikepdf and saves it to a temporary file.
+    Returns the path to the temporary decrypted file.
+    """
+    if not pikepdf:
+        raise OCRError("pikepdf module missing. Cannot handle password protected files.")
+        
+    try:
+        temp_decrypted = os.path.join(TEMP_DIR, f"decrypted_{os.path.basename(input_path)}")
+        os.makedirs(TEMP_DIR, exist_ok=True)
+        
+        with pikepdf.open(input_path, password=password) as pdf:
+            pdf.save(temp_decrypted)
+        return temp_decrypted
+    except pikepdf.PasswordError:
+        raise OCRError("Invalid password provided for encrypted PDF.")
+    except Exception as e:
+        raise OCRError(f"Failed to decrypt PDF: {str(e)}")
+
+def _merge_pdfs(pdf_list, output_path):
+    """
+    Merges a list of PDFs into one output file using pikepdf.
+    """
+    if not pikepdf:
+        raise OCRError("pikepdf module missing. Cannot merge PDF chunks.")
+        
+    merger = pikepdf.Pdf.new()
+    for pdf_file in pdf_list:
+        try:
+            with pikepdf.open(pdf_file) as src:
+                merger.pages.extend(src.pages)
+        except Exception as e:
+            logging.error(f"Error merging chunk {pdf_file}: {e}")
+            raise OCRError(f"Failed to merge chunk {os.path.basename(pdf_file)}")
+    
+    merger.save(output_path)
+    merger.close()
+
+def _run_cmd(cmd, env, progress_callback=None):
+    """
+    Executes a subprocess command and handles output/progress parsing.
+    Captures stderr for progress updates from OCRmyPDF/Tesseract.
+    """
+    global ACTIVE_PROCESS
+    
+    startupinfo = None
+    if os.name == 'nt': 
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    
+    # Process creation: Use new session/process group to allow clean termination
+    if os.name == 'posix':
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
+            env=env, start_new_session=True, bufsize=1, universal_newlines=True
+        )
+    else:
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
+            env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, 
+            startupinfo=startupinfo, bufsize=1, universal_newlines=True
+        )
+
+    ACTIVE_PROCESS = proc
+
+    stderr_output = []
+    
+    # Read stderr line by line for progress
+    while True:
+        line = proc.stderr.readline()
+        if not line and proc.poll() is not None: break
+        if line:
+            stderr_output.append(line)
+            # OCRmyPDF/Tesseract progress pattern: "INFO - Page X" or "Scanning page X"
+            # Adjust regex based on actual CLI output of ocrmypdf
+            match = re.search(r'(?:INFO\s+-\s+|Page\s+|Scanning page\s+)(\d+)', line, re.IGNORECASE)
+            if match and progress_callback:
+                try: 
+                    # Report the strict page number being processed
+                    progress_callback(int(match.group(1)))
+                except: pass
+    
+    rc = proc.poll()
+    out = proc.stdout.read()
+    err = "".join(stderr_output)
+    ACTIVE_PROCESS = None
+
+    if rc != 0:
+        raise subprocess.CalledProcessError(rc, cmd, output=out, stderr=err)
+    
+    return out, err
 
 def run_ocr(input_path, output_path, password=None, force=False, options=None, progress_callback=None):
     """
     Executes OCRmyPDF on the input file.
-    Retries on CPU if GPU fails.
-    """
-    global ACTIVE_PROCESS
     
+    Features:
+     - Handles Password Protection (auto-decrypt)
+     - Handles Large Files (Chunking > 50 pages)
+     - Error Management (Retry on CPU if GPU fails)
+     - Resource Cleanup
+    
+    Args:
+        input_path (str): Path to source PDF.
+        output_path (str): Path to save result.
+        password (str): PDF password (optional).
+        force (bool): Force OCR even if text exists.
+        options (dict): Options like language, deskew, clean, etc.
+        progress_callback (func): Function(page_num) for updates.
+        
+    Returns:
+        str: Path to the sidecar text file generated.
+    """
+    
+    # 1. Setup & Decryption
+    working_input = input_path
+    decrypted_temp = None
+    
+    try:
+        # Detect if we need decryption
+        ftype = detect_pdf_type(input_path, password)
+        if password or ftype == 'encrypted':
+            logging.info(f"Decrypting PDF: {input_path}")
+            decrypted_temp = _decrypt_pdf(input_path, password)
+            working_input = decrypted_temp
+
+        # 2. Check File Size / Page Count for Chunking
+        # Strategy: Limit chunking to ensure stability on low-mem systems
+        CHUNK_THRESHOLD = 50
+        CHUNK_SIZE = 20
+        
+        total_pages = 0
+        try:
+            if fitz:
+                with fitz.open(working_input) as doc:
+                    total_pages = len(doc)
+            elif pikepdf:
+                with pikepdf.open(working_input) as doc:
+                    total_pages = len(doc.pages)
+        except Exception: 
+            total_pages = 0 # Proceed without chunking if detection fails
+            
+        # --- CHUNKING STRATEGY ---
+        if total_pages > CHUNK_THRESHOLD and pikepdf:
+            logging.info(f"Large PDF detected ({total_pages} pages). Engaging chunking mode...")
+            return _run_ocr_chunked(
+                working_input, output_path, total_pages, CHUNK_SIZE, 
+                force, options, progress_callback
+            )
+        else:
+            # --- STANDARD SINGLE FILE PROCESS ---
+            return _run_ocr_single(working_input, output_path, force, options, progress_callback)
+            
+    except OCRError as e:
+        raise e
+    except Exception as e:
+        raise OCRError(f"OCR Execution Failed: {str(e)}")
+    finally:
+        # Cleanup decrypted temp file
+        if decrypted_temp and os.path.exists(decrypted_temp):
+            try: os.remove(decrypted_temp)
+            except: pass
+
+def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, options, progress_callback):
+    """
+    Splits PDF into chunks, OCRs them individually, and merges them back.
+    """
+    chunks_dir = os.path.join(TEMP_DIR, f"chunks_{os.getpid()}")
+    os.makedirs(chunks_dir, exist_ok=True)
+    
+    chunk_files = []     # (path, start_page)
+    processed_chunks = []
+    
+    try:
+        # 1. Split PDF
+        with pikepdf.open(input_path) as pdf:
+            num_chunks = math.ceil(total_pages / chunk_size)
+            
+            for i in range(num_chunks):
+                start_page = i * chunk_size
+                end_page = min((i + 1) * chunk_size, total_pages)
+                
+                # Extract chunk
+                dst = pikepdf.Pdf.new()
+                for p in range(start_page, end_page):
+                    dst.pages.append(pdf.pages[p])
+                    
+                chunk_name = f"chunk_{i}.pdf"
+                chunk_path = os.path.join(chunks_dir, chunk_name)
+                dst.save(chunk_path)
+                chunk_files.append((chunk_path, start_page)) # Stores path and page offset
+        
+        # 2. Process Each Chunk
+        for i, (c_path, offset) in enumerate(chunk_files):
+            c_out = c_path.replace(".pdf", "_ocr.pdf")
+            
+            # Wrapper for progress callback to map chunk page -> global page
+            # OCRmyPDF will report page 1..N for the chunk. We add offset.
+            def chunk_progress_wrapper(p):
+                if progress_callback:
+                    progress_callback(offset + p)
+            
+            logging.info(f"Processing chunk {i+1}/{len(chunk_files)}...")
+            
+            # Recursive call to single runner
+            _run_ocr_single(c_path, c_out, force, options, chunk_progress_wrapper)
+            processed_chunks.append(c_out)
+            
+        # 3. Merge Results
+        logging.info("Merging processed chunks...")
+        _merge_pdfs(processed_chunks, output_path)
+        
+        # 4. Generate Sidecar Text (merged from chunks)
+        # Note: ocrmypdf produces a sidecar per chunk. We accept that and merge them manually.
+        sidecar_file = output_path.replace(".pdf", ".txt")
+        full_text = ""
+        for p_chunk in processed_chunks:
+            txt_chunk = p_chunk.replace(".pdf", ".txt")
+            if os.path.exists(txt_chunk):
+                with open(txt_chunk, "r", encoding="utf-8", errors="ignore") as f:
+                    full_text += f.read() + "\n"
+        
+        with open(sidecar_file, "w", encoding="utf-8") as f:
+            f.write(full_text)
+            
+        return sidecar_file
+        
+    except Exception as e:
+        raise OCRError(f"Chunking processing failed: {e}")
+    finally:
+        # Cleanup chunks directory
+        try: shutil.rmtree(chunks_dir)
+        except: pass
+
+def _run_ocr_single(input_path, output_path, force, options, progress_callback):
+    """
+    Internal function to run OCR on a single file (not password protected).
+    """
     # 1. Prepare Base CMD
     base_cmd = ["ocrmypdf"]
     if force: base_cmd.append("--force-ocr")
     else: base_cmd.append("--skip-text")
 
-    # Preserve file size by avoiding strict PDF/A conversion
+    # Important: Optimize for size and compatibility
     base_cmd.extend(["--output-type", "pdf"])
 
     if options:
@@ -89,20 +353,21 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
         if options.get("optimize", "0") != "0": 
             base_cmd.extend(["--optimize", options.get("optimize")])
         
-        # Language
         lang = options.get("language", "eng")
         base_cmd.extend(["-l", lang])
             
     sidecar_file = output_path.replace(".pdf", ".txt")
     base_cmd.extend(["--sidecar", sidecar_file])
-    base_cmd.append("-v")
+    base_cmd.append("-v") # Verbose for progress tracking
 
     # Thread/Job Control
+    # Respect user setting or default to 1 (safe)
     env = os.environ.copy()
     safe_jobs = 1
     if options:
         safe_jobs = max(1, int(options.get("max_cpu_threads", 2)))
     
+    # OMP_THREAD_LIMIT helps Tesseract not oversubscribe
     env["OMP_THREAD_LIMIT"] = "1"
     base_cmd.extend(["--jobs", str(safe_jobs)])
 
@@ -110,71 +375,49 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
     tess_cfg_path = None
     use_gpu = options.get("use_gpu") if options else False
     
-    # Function to execute command
-    def execute_attempt(is_gpu_attempt):
+    # Internal execution helper with retry logic
+    def attempt_execution(is_gpu):
         nonlocal tess_cfg_path
         cmd = list(base_cmd)
         
-        if is_gpu_attempt:
+        if is_gpu:
             try:
+                # Create config file for Tesseract
                 temp_dir = os.path.dirname(output_path) if os.path.dirname(output_path) else tempfile.gettempdir()
-                tess_cfg_path = os.path.join(temp_dir, "tess_gpu_config.cfg")
+                tess_cfg_path = os.path.join(temp_dir, f"tess_gpu_config_{os.getpid()}.cfg")
                 with open(tess_cfg_path, "w") as f:
+                    # Enable OpenCL for Tesseract
                     f.write("tessedit_enable_opencl 1\n")
                 cmd.extend(["--tesseract-config", tess_cfg_path])
             except: 
-                pass # Fail silently, proceed with cmd
+                pass # Proceed without config if write fails
         
         cmd.extend([input_path, output_path])
-
-        startupinfo = None
-        if os.name == 'nt': 
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         
-        global ACTIVE_PROCESS
-        
-        if os.name == 'posix':
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, start_new_session=True, bufsize=1, universal_newlines=True)
-        else:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, startupinfo=startupinfo, bufsize=1, universal_newlines=True)
+        try:
+            _run_cmd(cmd, env, progress_callback)
+        except subprocess.CalledProcessError as e:
+            raise e
+        finally:
+            # Clean up tesseract config
+            if tess_cfg_path and os.path.exists(tess_cfg_path):
+                try: os.remove(tess_cfg_path)
+                except: pass
 
-        ACTIVE_PROCESS = proc
-
-        stderr_output = []
-        while True:
-            line = proc.stderr.readline()
-            if not line and proc.poll() is not None: break
-            if line:
-                stderr_output.append(line)
-                match = re.search(r'(?:INFO\s+-\s+|Page\s+|Scanning page\s+)(\d+)', line, re.IGNORECASE)
-                if match and progress_callback:
-                    try: progress_callback(int(match.group(1)))
-                    except: pass
-        
-        rc = proc.poll()
-        out = proc.stdout.read()
-        err = "".join(stderr_output)
-        ACTIVE_PROCESS = None
-        
-        if tess_cfg_path and os.path.exists(tess_cfg_path):
-            try: os.remove(tess_cfg_path)
-            except: pass
-
-        if rc != 0:
-            raise subprocess.CalledProcessError(rc, cmd, output=out, stderr=err)
-
-    # Retry Logic
+    # Retry Logic: GPU -> CPU
     try:
-        execute_attempt(use_gpu)
+        attempt_execution(use_gpu)
     except subprocess.CalledProcessError as e:
         if use_gpu:
-            print("GPU failed. Retrying with CPU...")
+            logging.warning("GPU OCR mode failed. Retrying with CPU fallback...")
             try:
-                execute_attempt(False) # Retry without GPU
+                attempt_execution(False) 
             except subprocess.CalledProcessError as e2:
-                raise e2 # Fail for real
+                # Capture stderr for meaningful error
+                err_text = e2.stderr if e2.stderr else str(e2)
+                raise OCRError(f"OCR Failed (CPU Retrieval): {err_text[-500:]}")
         else:
-            raise e # Fail if CPU mode failed
+            err_text = e.stderr if e.stderr else str(e)
+            raise OCRError(f"OCR Failed: {err_text[-500:]}")
 
     return sidecar_file

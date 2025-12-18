@@ -12,7 +12,7 @@ DEFAULT_CONFIG = {
     "clean": False,
     "rotate": True,
     "force": False,
-    "optimize": "1",
+    "optimize": "0",
     "use_gpu": False,
     "gpu_device": "Auto",
     "max_cpu_threads": 2

@@ -1,2 +1,4 @@
 pikepdf
 ocrmypdf
+PyMuPDF
+Pillow

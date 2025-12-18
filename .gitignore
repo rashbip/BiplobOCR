@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / Packaging
+dist/
+build/
+*.spec
+*.egg-info/
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# VS Code
+.vscode/
+
+# Project Specific
+_biplob_temp/
+*.log
+config.json
+history.json
+# Keep tracking requirements.txt and other source files
