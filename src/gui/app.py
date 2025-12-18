@@ -255,15 +255,41 @@ class BiplobOCR(TkinterDnD.Tk):
             self.lbl_global_status.config(text="Stopping...")
         except: pass
 
-    def update_global_status_detail(self, val, page, total):
+    def update_global_status_detail(self, val, page, total, start_time):
         try:
-            self.global_progress["value"] = val
-            self.lbl_global_status.config(text=f"Processing Page {page} of {total} ({int(val)}%)")
+            # Monotonic progress check
+            if not hasattr(self, 'max_page_seen'): self.max_page_seen = 0
+            if page > self.max_page_seen: self.max_page_seen = page
+            else: page = self.max_page_seen # Prevent backward jumps in UI
+            
+            # Recalculate val based on max_seen to keep bar smooth
+            real_val = (page / total) * 100 if total else 0
+            self.global_progress["value"] = real_val
+            
+            # ETR Calculation
+            elapsed = time.time() - start_time
+            if page > 0:
+                avg_sec_per_page = elapsed / page
+                remaining_pages = total - page
+                etr_seconds = int(remaining_pages * avg_sec_per_page)
+                
+                # Format ETR
+                if etr_seconds > 3600:
+                    etr_str = f"{etr_seconds//3600}h {(etr_seconds%3600)//60}m"
+                else:
+                    etr_str = f"{etr_seconds//60}m {etr_seconds%60}s"
+                
+                txt = f"Processing Page {page} of {total} ({int(real_val)}%) - ETR: {etr_str}"
+            else:
+                txt = f"Processing Page {page} of {total} ({int(real_val)}%)"
+
+            self.lbl_global_status.config(text=txt)
         except: pass
 
     # --- SINGLE SCAN ---
     def start_processing_thread(self): 
         self.save_settings_inline() 
+        self.max_page_seen = 0  # Reset counter
         
         # PRE-CHECK: Detect potential issues before starting
         if not self.var_force.get() and self.current_pdf_path:
@@ -293,6 +319,7 @@ class BiplobOCR(TkinterDnD.Tk):
 
     def run_process_logic(self):
         try:
+            start_time = time.time()
             if self.stop_processing_flag: raise Exception("Process Cancelled")
             
             lang_code = self.var_lang.get()
@@ -323,7 +350,7 @@ class BiplobOCR(TkinterDnD.Tk):
             def update_prog(p):
                 if total_pages > 0:
                     val = (p / total_pages) * 100
-                    self.after(0, lambda v=val, p=p, t=total_pages: self.update_global_status_detail(v, p, t))
+                    self.after(0, lambda v=val, p=p, t=total_pages: self.update_global_status_detail(v, p, t, start_time))
             
             self.after(0, lambda: self.global_progress.config(mode="determinate", maximum=100, value=0))
             
@@ -436,6 +463,7 @@ class BiplobOCR(TkinterDnD.Tk):
             fname = os.path.basename(fpath)
             
             self.after(0, lambda id=item_id: self.batch_tree.set(id, "Status", "Processing..."))
+            self.batch_max_seen_page = 0 # Reset per file
             
             try:
                 out_name = f"biplob_ocr_{fname}"
@@ -446,12 +474,23 @@ class BiplobOCR(TkinterDnD.Tk):
                     with fitz.open(fpath) as d: doc_total_pages = len(d)
                 except: pass
                 
+                # File Start Time
+                file_start_time = time.time()
+
                 def batch_prog_cb(p):
                     if doc_total_pages > 0:
                         doc_pct = (p / doc_total_pages) * 100
                         global_val = (i * 100) + doc_pct
-                        self.after(0, lambda v=global_val, p=p, t=doc_total_pages, n=fname, idx=i+1: 
-                            self.update_batch_status_detail(v, idx, total_docs, n, p, t))
+                        
+                        # ETR Logic (Current File)
+                        elapsed = time.time() - file_start_time
+                        avg_p = elapsed / p if p > 0 else 0
+                        rem_p = doc_total_pages - p
+                        etr = int(rem_p * avg_p)
+                        etr_str = f"{etr//60}m {etr%60}s"
+                        
+                        self.after(0, lambda v=global_val, p=p, t=doc_total_pages, n=fname, idx=i+1, e=etr_str: 
+                            self.update_batch_status_detail(v, idx, total_docs, n, p, t, e))
 
                 pw = None
                 try: 
@@ -482,9 +521,13 @@ class BiplobOCR(TkinterDnD.Tk):
         
         self.after(0, lambda: self.on_batch_complete(success_count, total_docs))
 
-    def update_batch_status_detail(self, val, idx, total_docs, fname, page, total_pages):
+    def update_batch_status_detail(self, val, idx, total_docs, fname, page, total_pages, etr_str):
+        if not hasattr(self, 'batch_max_seen_page'): self.batch_max_seen_page = 0
+        if page > self.batch_max_seen_page: self.batch_max_seen_page = page
+        else: page = self.batch_max_seen_page
+
         self.global_progress.configure(maximum=total_docs*100, value=val)
-        self.lbl_global_status.config(text=f"[{idx}/{total_docs}] {fname}: Page {page}/{total_pages} ({int((page/total_pages)*100)}%)")
+        self.lbl_global_status.config(text=f"[{idx}/{total_docs}] {fname}: Page {page}/{total_pages} ({int((page/total_pages)*100)}%) - ETR: {etr_str}")
 
     def on_batch_complete(self, success, total):
         self.hide_global_status()

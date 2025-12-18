@@ -44,7 +44,13 @@ class HomeView(ttk.Frame):
         c2_inner.pack(fill="both", expand=True)
         ttk.Label(c2_inner, text="📦", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
         ttk.Label(c2_inner, text=app_state.t("batch_title"), font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Button(c2_inner, text=app_state.t("btn_open_batch"), command=lambda: self.controller.switch_tab("batch")).pack(pady=20)
+        ttk.Label(c2_inner, text="Process multiple PDFs at once", foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+        
+        def open_batch_diag():
+            self.controller.switch_tab("batch")
+            self.controller.add_batch_files()
+            
+        ttk.Button(c2_inner, text=app_state.t("btn_open_batch"), style="Accent.TButton", command=open_batch_diag).pack(pady=20, ipadx=10, ipady=5)
 
         # Recent Documents
         ttk.Label(self, text=app_state.t("home_recent"), font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
