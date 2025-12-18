@@ -322,9 +322,21 @@ class BiplobOCR(TkinterDnD.Tk):
             start_time = time.time()
             if self.stop_processing_flag: raise Exception("Process Cancelled")
             
-            lang_code = self.var_lang.get()
-            ocr_lang = "eng"
-            if lang_code == "bn": ocr_lang = "ben+eng"
+            # Gather selected languages
+            selected_langs = []
+            if hasattr(self, 'scan_lang_vars'):
+                for lang, var in self.scan_lang_vars.items():
+                    if var.get(): selected_langs.append(lang)
+            
+            # Default fallback if somehow empty (though UI should prevent or we prevent here)
+            if not selected_langs:
+                 raise Exception("No OCR language selected! Please select at least one data pack.")
+
+            # Save selection for next time
+            app_state.set_option("last_used_ocr_languages", selected_langs)
+            app_state.save_config({}) # Persist to disk
+            
+            ocr_lang = "+".join(selected_langs)
             
             opts = {
                 "deskew": self.var_deskew.get(),
@@ -444,6 +456,7 @@ class BiplobOCR(TkinterDnD.Tk):
 
     def run_batch_logic(self, out_dir):
         opts = {
+            "language": self.var_ocr_lang.get(),
             "deskew": self.var_deskew.get(),
             "clean": self.var_clean.get(),
             "rotate": self.var_rotate.get(),
@@ -549,14 +562,45 @@ class BiplobOCR(TkinterDnD.Tk):
         
         ttk.Label(self.scan_sidebar, text="Active Task", font=("Segoe UI", 14, "bold"), foreground=THEME_COLOR).pack(anchor="w", pady=(0, 20))
         ttk.Button(self.scan_sidebar, text="📂 Open New PDF", command=self.open_pdf).pack(fill="x", pady=2)
+        
+        # Options
         opt_frame = ttk.LabelFrame(self.scan_sidebar, text=app_state.t("grp_options"), padding=10)
-        opt_frame.pack(fill="x", pady=20)
+        opt_frame.pack(fill="x", pady=10)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_deskew"), variable=self.var_deskew).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_clean"), variable=self.var_clean).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_rotate"), variable=self.var_rotate).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_force"), variable=self.var_force).pack(anchor="w", pady=2)
         ttk.Label(opt_frame, text=app_state.t("lbl_optimize")).pack(anchor="w", pady=(10, 2))
         ttk.Combobox(opt_frame, textvariable=self.var_optimize, values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
+
+        # Multi-Select Languages
+        lang_frame = ttk.LabelFrame(self.scan_sidebar, text="Processing Languages", padding=10)
+        lang_frame.pack(fill="both", expand=True, pady=10)
+        
+        # Load available and previously selected
+        from ..core.ocr_engine import get_available_languages
+        avail = get_available_languages()
+        last_used = app_state.get("last_used_ocr_languages")
+        if not last_used: last_used = [app_state.get("ocr_language", "eng")]
+        
+        # Scrollable container for langs
+        lc = tk.Canvas(lang_frame, bg=SURFACE_COLOR, highlightthickness=0)
+        ls = ttk.Scrollbar(lang_frame, orient="vertical", command=lc.yview)
+        lf = ttk.Frame(lc, style="Card.TFrame")
+        
+        lf.bind("<Configure>", lambda e: lc.configure(scrollregion=lc.bbox("all")))
+        lc.create_window((0, 0), window=lf, anchor="nw")
+        lc.configure(yscrollcommand=ls.set)
+        
+        lc.pack(side="left", fill="both", expand=True)
+        ls.pack(side="right", fill="y")
+        
+        self.scan_lang_vars = {}
+        for l in avail:
+            var = tk.BooleanVar(value=(l in last_used))
+            ttk.Checkbutton(lf, text=l, variable=var).pack(anchor="w")
+            self.scan_lang_vars[l] = var
+
         self.btn_process = ttk.Button(self.scan_sidebar, text=app_state.t("btn_process"), command=self.start_processing_thread, state="disabled", style="Accent.TButton")
         self.btn_process.pack(fill="x", pady=20)
         self.lbl_status = ttk.Label(self.scan_sidebar, text=app_state.t("lbl_status_idle"), foreground="gray", wraplength=250)
@@ -594,20 +638,148 @@ class BiplobOCR(TkinterDnD.Tk):
         # Lang
         f_lang = ttk.LabelFrame(self.view_settings, text=app_state.t("lbl_lang"), padding=20)
         f_lang.pack(fill="x", pady=10)
+        
+        # 1. Interface Language
         ttk.Label(f_lang, text=app_state.t("lbl_lang")).pack(anchor="w")
-        cb_lang = ttk.Combobox(f_lang, textvariable=self.var_lang, values=["en", "bn"], state="readonly")
-        cb_lang.pack(fill="x", pady=5)
+        self.cb_lang = ttk.Combobox(f_lang, textvariable=self.var_lang, values=["en", "bn"], state="readonly")
+        self.cb_lang.pack(fill="x", pady=(5, 15))
+        
+        # 2. OCR Language
+        from ..core.ocr_engine import get_available_languages
+        self.avail_langs = get_available_languages()
+        
+        ttk.Label(f_lang, text=app_state.t("lbl_ocr_lang")).pack(anchor="w")
+        self.var_ocr_lang = tk.StringVar(value=app_state.get("ocr_language", "eng")) # Need to ensure init somewhere or just here
+        
+        self.cb_ocr_lang = ttk.Combobox(f_lang, textvariable=self.var_ocr_lang, values=self.avail_langs, state="readonly")
+        self.cb_ocr_lang.pack(fill="x", pady=5)
+        
+        # Data Packs Management
+        ttk.Label(f_lang, text="Installed Data Packs", font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(15, 5))
+        
+        # Scrollable Container for Packs
+        pack_container = ttk.Frame(f_lang, style="Card.TFrame", padding=2)
+        pack_container.pack(fill="x", ipady=5)
+        
+        self.packs_canvas = tk.Canvas(pack_container, bg=BG_COLOR, height=150, highlightthickness=0)
+        self.packs_scrollbar = ttk.Scrollbar(pack_container, orient="vertical", command=self.packs_canvas.yview)
+        self.packs_scroll_frame = ttk.Frame(self.packs_canvas, style="Card.TFrame")
+        
+        self.packs_scroll_frame.bind("<Configure>", lambda e: self.packs_canvas.configure(scrollregion=self.packs_canvas.bbox("all")))
+        self.packs_window = self.packs_canvas.create_window((0, 0), window=self.packs_scroll_frame, anchor="nw")
+        self.packs_canvas.configure(yscrollcommand=self.packs_scrollbar.set)
+        
+        self.packs_canvas.pack(side="left", fill="both", expand=True)
+        self.packs_scrollbar.pack(side="right", fill="y")
+        self.packs_canvas.bind('<Configure>', lambda e: self.packs_canvas.itemconfig(self.packs_window, width=e.width))
+
+        btn_add_pack = ttk.Button(f_lang, text="➕ Add Data Pack", command=self.add_data_pack)
+        btn_add_pack.pack(anchor="e", pady=5)
+        
+        self.refresh_data_packs_ui()
         
         # Save Trigger
-        cb_lang.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
+        self.cb_lang.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
+        self.cb_ocr_lang.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
         cb_gpu.bind("<<ComboboxSelected>>", lambda e: self.save_settings_inline())
         s_threads.bind("<ButtonRelease-1>", lambda e: self.save_settings_inline())
+
+    def refresh_data_packs_ui(self):
+        for w in self.packs_scroll_frame.winfo_children(): w.destroy()
+        
+        from ..core.ocr_engine import get_tessdata_dir
+        d = get_tessdata_dir()
+        if not os.path.exists(d): return
+        
+        files = sorted([f for f in os.listdir(d) if "traineddata" in f])
+        
+        for f in files:
+            is_disabled = f.endswith(".disabled")
+            clean_name = f.replace(".disabled", "")
+            
+            row = ttk.Frame(self.packs_scroll_frame, padding=5)
+            row.pack(fill="x", pady=1)
+            
+            # Icon/Name
+            icon = "🔴" if is_disabled else "🟢"
+            lbl = ttk.Label(row, text=f"{icon} {clean_name}", font=("Segoe UI", 9))
+            if is_disabled: lbl.config(foreground="gray")
+            lbl.pack(side="left", padx=5)
+            
+            # Actions
+            if clean_name == "osd.traineddata":
+                ttk.Label(row, text="(System)", font=("Segoe UI", 8), foreground="gray").pack(side="right", padx=10)
+                continue # Protect OSD
+                
+            def toggle_disable(fname=f, disabled=is_disabled):
+                src = os.path.join(d, fname)
+                if disabled:
+                    dst = os.path.join(d, fname.replace(".disabled", ""))
+                else:
+                    dst = os.path.join(d, fname + ".disabled")
+                try:
+                    os.rename(src, dst)
+                    self.refresh_data_packs_ui()
+                    # Refresh lang list
+                    from ..core.ocr_engine import get_available_languages
+                    self.avail_langs = get_available_languages()
+                    self.cb_ocr_lang['values'] = self.avail_langs
+                    if self.var_ocr_lang.get() not in self.avail_langs: self.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
+
+                except Exception as e:
+                    messagebox.showerror("Error", str(e))
+
+            def delete_pack(fname=f):
+                if messagebox.askyesno("Confirm", f"Delete {fname}?"):
+                    try:
+                        os.remove(os.path.join(d, fname))
+                        self.refresh_data_packs_ui()
+                        from ..core.ocr_engine import get_available_languages
+                        self.avail_langs = get_available_languages()
+                        self.cb_ocr_lang['values'] = self.avail_langs
+                        if self.var_ocr_lang.get() not in self.avail_langs: self.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
+                    except Exception as e:
+                        messagebox.showerror("Error", str(e))
+
+            btn_del = ttk.Button(row, text="🗑", width=3, command=delete_pack, style="Danger.TButton")
+            btn_del.pack(side="right", padx=2)
+            
+            btn_toggle = ttk.Button(row, text="Enable" if is_disabled else "Disable", width=8, command=toggle_disable)
+            btn_toggle.pack(side="right", padx=2)
+
+    def add_data_pack(self):
+        from ..core.ocr_engine import get_tessdata_dir
+        f = filedialog.askopenfilename(title="Select Tesseract Data File", filetypes=[("Trained Data", "*.traineddata")])
+        if not f: return
+        
+        try:
+            # Basic Validation: Check header
+            with open(f, 'rb') as tf:
+                header = tf.read(15)
+                # Tesseract traineddata usually starts with specific bytes, but simply checking existence/size is safer initially without brittle magic checks.
+                # Real check: just ensure it's not empty.
+                if len(header) < 10: raise Exception("Invalid file content")
+            
+            dest = os.path.join(get_tessdata_dir(), os.path.basename(f))
+            shutil.copy(f, dest)
+            
+            messagebox.showinfo("Success", f"Installed {os.path.basename(f)}")
+            
+            # Refresh Lists
+            self.refresh_data_packs_ui()
+            from ..core.ocr_engine import get_available_languages
+            self.avail_langs = get_available_languages()
+            self.cb_ocr_lang['values'] = self.avail_langs
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to install data pack: {e}")
 
     def save_settings_inline(self):
         old_lang = app_state.get("language")
         new_lang = self.var_lang.get()
         new_conf = { 
             "language": new_lang, 
+            "ocr_language": self.var_ocr_lang.get(),
             "theme": "dark", 
             "use_gpu": self.var_gpu.get(),
             "gpu_device": self.var_gpu_device.get(),

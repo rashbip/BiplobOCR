@@ -1,6 +1,11 @@
 {
     "theme": "dark",
-    "language": "bn",
+    "language": "en",
+    "ocr_language": "ben",
+    "last_used_ocr_languages": [
+        "eng",
+        "hin"
+    ],
     "deskew": false,
     "clean": false,
     "rotate": false,

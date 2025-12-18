@@ -34,6 +34,48 @@ class OCRError(Exception):
     """Custom Exception for OCR errors to provide better user feedback."""
     pass
 
+def setup_tesseract_environment():
+    """Confingure environment to use bundled Tesseract from src/tesseract/windows."""
+    try:
+        # Calculate paths relative to this file (src/core/ocr_engine.py)
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # -> src
+        tess_bin = os.path.join(base_dir, "tesseract", "windows")
+        tess_data = os.path.join(tess_bin, "tessdata")
+        
+        # Check if exists
+        tess_exe = os.path.join(tess_bin, "tesseract.exe")
+        if not os.path.exists(tess_exe):
+            logging.warning(f"Bundled Tesseract not found at: {tess_exe}. Utilizing system PATH.")
+            return
+
+        # Prepend to PATH so it takes precedence over system installs
+        os.environ["PATH"] = tess_bin + os.pathsep + os.environ["PATH"]
+        
+        # Set TESSDATA_PREFIX if not already set or force it
+        os.environ["TESSDATA_PREFIX"] = tess_data
+        
+        logging.info(f"Using bundled Tesseract: {tess_exe}")
+        logging.info(f"Tessdata Prefix: {tess_data}")
+        
+    except Exception as e:
+        logging.error(f"Failed to setup local Tesseract: {e}")
+
+# Initialize environment immediately
+setup_tesseract_environment()
+
+def get_tessdata_dir():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_dir, "tesseract", "windows", "tessdata")
+
+def get_available_languages():
+    d = get_tessdata_dir()
+    if not os.path.exists(d): return ["eng"]
+    langs = []
+    for f in os.listdir(d):
+        if f.endswith(".traineddata") and f != "osd.traineddata":
+            langs.append(f.replace(".traineddata", ""))
+    return sorted(langs) if langs else ["eng"]
+
 def detect_pdf_type(file_path, password=None):
     """
     Check if PDF is text-based (Digital), scanned images, or encrypted.
