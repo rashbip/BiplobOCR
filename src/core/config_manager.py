@@ -17,6 +17,7 @@ DEFAULT_CONFIG = {
     "optimize": "0",
     "use_gpu": False,
     "gpu_device": "Auto",
+    "internal_packs": ["osd", "equ"],
     "max_cpu_threads": 2
 }
 

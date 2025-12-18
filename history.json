@@ -1,10 +1,42 @@
 [
     {
+        "filename": "selected_pages - Copy - Copy - Copy.pdf",
+        "date": "2025-12-18 20:02:04",
+        "size": "N/A",
+        "status": "Batch Cancelled",
+        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy.pdf",
+        "output_path": null
+    },
+    {
+        "filename": "selected_pages - Copy - Copy - Copy.pdf",
+        "date": "2025-12-18 19:57:36",
+        "size": "N/A",
+        "status": "Batch Cancelled",
+        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy.pdf",
+        "output_path": null
+    },
+    {
+        "filename": "selected_pages - Copy - Copy - Copy (2).pdf",
+        "date": "2025-12-18 19:55:04",
+        "size": "N/A",
+        "status": "Batch Failed",
+        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy (2).pdf",
+        "output_path": null
+    },
+    {
         "filename": "selected_pages - Copy - Copy - Copy (3).pdf",
-        "date": "2025-12-18 19:22:35",
-        "size": "1.1 MB",
-        "status": "Completed",
+        "date": "2025-12-18 19:54:58",
+        "size": "N/A",
+        "status": "Batch Failed",
         "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy (3).pdf",
-        "output_path": "C:\\Users\\biplo\\AppData\\Local\\Temp\\BiplobOCR_Temp\\processed_output.pdf"
+        "output_path": null
+    },
+    {
+        "filename": "selected_pages - Copy - Copy - Copy.pdf",
+        "date": "2025-12-18 19:54:52",
+        "size": "N/A",
+        "status": "Batch Failed",
+        "source_path": "C:/Users/biplo/Downloads/selected_pages - Copy - Copy - Copy.pdf",
+        "output_path": null
     }
 ]

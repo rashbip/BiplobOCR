@@ -72,7 +72,8 @@ def get_available_languages():
     if not os.path.exists(d): return ["eng"]
     langs = []
     for f in os.listdir(d):
-        if f.endswith(".traineddata") and f != "osd.traineddata":
+        # Exclude osd/equ as they are special data files, not languages
+        if f.endswith(".traineddata") and f not in ["osd.traineddata", "equ.traineddata"]:
             langs.append(f.replace(".traineddata", ""))
     return sorted(langs) if langs else ["eng"]
 
@@ -233,6 +234,8 @@ def _run_cmd(cmd, env, progress_callback=None):
     ACTIVE_PROCESS = None
 
     if rc != 0:
+        logging.error(f"Command failed with RC {rc}: {cmd}")
+        logging.error(f"STDERR ({len(err)} chars): {err}")
         raise subprocess.CalledProcessError(rc, cmd, output=out, stderr=err)
     
     return out, err

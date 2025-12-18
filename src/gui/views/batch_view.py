@@ -20,30 +20,79 @@ class BatchView(ttk.Frame):
             self.controller.add_dropped_batch_files(event.data)
 
     def build_ui(self):
-        ttk.Label(self, text=app_state.t("batch_title"), style="Header.TLabel").pack(anchor="w", pady=(20, 10))
-        ttk.Label(self, text=app_state.t("batch_desc"), foreground="gray").pack(anchor="w", pady=(0, 20))
+        # Main layout: Sidebar (Options) + Main (List)
+        paned = ttk.PanedWindow(self, orient="horizontal")
+        paned.pack(fill="both", expand=True)
+
+        # --- Sidebar (Options) ---
+        sidebar = ttk.Frame(paned, width=300, padding=(0, 0, 10, 0))
+        paned.add(sidebar, weight=0)
         
-        toolbar = ttk.Frame(self)
+        ttk.Label(sidebar, text=app_state.t("lbl_batch_opts"), style="Header.TLabel").pack(anchor="w", pady=(20, 10))
+        
+        # Options Group
+        opt_frame = ttk.LabelFrame(sidebar, text=app_state.t("grp_options"), padding=10)
+        opt_frame.pack(fill="x", pady=5)
+        ttk.Checkbutton(opt_frame, text=app_state.t("opt_deskew"), variable=self.controller.var_deskew).pack(anchor="w", pady=2)
+        ttk.Checkbutton(opt_frame, text=app_state.t("opt_clean"), variable=self.controller.var_clean).pack(anchor="w", pady=2)
+        ttk.Checkbutton(opt_frame, text=app_state.t("opt_rotate"), variable=self.controller.var_rotate).pack(anchor="w", pady=2)
+        ttk.Checkbutton(opt_frame, text=app_state.t("opt_force"), variable=self.controller.var_force).pack(anchor="w", pady=2)
+        ttk.Label(opt_frame, text=app_state.t("lbl_optimize")).pack(anchor="w", pady=(10, 2))
+        ttk.Combobox(opt_frame, textvariable=self.controller.var_optimize, values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
+
+        # Languages Group
+        lang_frame = ttk.LabelFrame(sidebar, text="Processing Languages", padding=10)
+        lang_frame.pack(fill="x", pady=15)
+        
+        # Load available - Reuse logic? Or direct import.
+        from ...core.ocr_engine import get_available_languages
+        avail = get_available_languages()
+        
+        # Filter internal
+        internal_packs = app_state.get("internal_packs", [])
+        avail = [l for l in avail if l not in internal_packs]
+
+        last_used = app_state.get("last_used_ocr_languages")
+        if not last_used: last_used = [app_state.get("ocr_language", "eng")]
+
+        lc = tk.Canvas(lang_frame, bg=SURFACE_COLOR, highlightthickness=0, height=150)
+        ls = ttk.Scrollbar(lang_frame, orient="vertical", command=lc.yview)
+        lf = ttk.Frame(lc, style="Card.TFrame")
+        
+        lf.bind("<Configure>", lambda e: lc.configure(scrollregion=lc.bbox("all")))
+        lc.create_window((0, 0), window=lf, anchor="nw")
+        lc.configure(yscrollcommand=ls.set)
+        
+        lc.pack(side="left", fill="x", expand=True)
+        ls.pack(side="right", fill="y")
+        
+        self.controller.batch_lang_vars = {}
+        for l in avail:
+            var = tk.BooleanVar(value=(l in last_used))
+            ttk.Checkbutton(lf, text=l, variable=var).pack(anchor="w")
+            self.controller.batch_lang_vars[l] = var
+
+        # Action Button (Start)
+        self.controller.btn_start_batch = ttk.Button(sidebar, text=app_state.t("btn_start_batch"), command=self.controller.start_batch_processing, style="Accent.TButton")
+        self.controller.btn_start_batch.pack(fill="x", pady=20)
+
+
+        # --- Main Content (File List) ---
+        main_content = ttk.Frame(paned, padding=(10, 0, 0, 0))
+        paned.add(main_content, weight=1)
+
+        ttk.Label(main_content, text=app_state.t("batch_title"), style="Header.TLabel").pack(anchor="w", pady=(20, 10))
+        ttk.Label(main_content, text=app_state.t("batch_desc"), foreground="gray").pack(anchor="w", pady=(0, 20))
+        
+        toolbar = ttk.Frame(main_content)
         toolbar.pack(fill="x", pady=5)
         ttk.Button(toolbar, text=app_state.t("btn_add_files"), command=self.controller.add_batch_files, style="Accent.TButton", width=15).pack(side="left", padx=(0, 5))
         ttk.Button(toolbar, text=app_state.t("btn_clear_list"), command=self.controller.clear_batch_files).pack(side="left")
 
         cols = ("Filename", "Status")
-        self.controller.batch_tree = ttk.Treeview(self, columns=cols, show="headings", height=10)
+        self.controller.batch_tree = ttk.Treeview(main_content, columns=cols, show="headings")
         self.controller.batch_tree.pack(fill="both", expand=True, pady=10)
         self.controller.batch_tree.heading("Filename", text=app_state.t("col_filename"))
         self.controller.batch_tree.heading("Status", text=app_state.t("col_status"))
         self.controller.batch_tree.column("Filename", width=400)
         self.controller.batch_tree.column("Status", width=150)
-        
-        controls = ttk.Frame(self, padding=10, style="Card.TFrame")
-        controls.pack(fill="x", pady=10)
-        
-        opt_box = ttk.Frame(controls, style="Card.TFrame")
-        opt_box.pack(side="left", fill="both", expand=True)
-        ttk.Label(opt_box, text=app_state.t("lbl_batch_opts"), font=("Segoe UI", 10, "bold"), background=SURFACE_COLOR).pack(anchor="w")
-        ttk.Checkbutton(opt_box, text=app_state.t("opt_deskew"), variable=self.controller.var_deskew).pack(side="left", padx=5)
-        ttk.Checkbutton(opt_box, text=app_state.t("opt_clean"), variable=self.controller.var_clean).pack(side="left", padx=5)
-        
-        self.controller.btn_start_batch = ttk.Button(controls, text=app_state.t("btn_start_batch"), command=self.controller.start_batch_processing, style="Accent.TButton", width=20)
-        self.controller.btn_start_batch.pack(side="right")

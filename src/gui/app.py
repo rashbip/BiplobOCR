@@ -456,8 +456,33 @@ class BiplobOCR(TkinterDnD.Tk):
         self.batch_files = []
 
     def run_batch_logic(self, out_dir):
+        print("Starting batch logic...")
+        selected_langs = []
+        if hasattr(self, 'batch_lang_vars'):
+            for lang, var in self.batch_lang_vars.items():
+                if var.get(): selected_langs.append(lang)
+        
+        print(f"Batch languages: {selected_langs}")
+
+        if not selected_langs:
+            print("No languages selected!")
+            self.after(0, lambda: messagebox.showerror("Error", "No OCR languages selected for batch!"))
+            self.after(0, lambda: self.on_batch_complete(0, len(self.batch_files))) 
+            return
+
+        # Save selection
+        # Note: calling app_state methods is generally thread-safe for simple dicts, but save_config writes file.
+        # Ideally should be main thread, but doing it here is likely fine or we can schedule it.
+        try:
+             app_state.set_option("last_used_ocr_languages", selected_langs)
+             app_state.save_config({})
+        except Exception as e: print(f"Config save error: {e}")
+
+        ocr_lang = "+".join(selected_langs)
+        print(f"OCR Lang string: {ocr_lang}")
+
         opts = {
-            "language": self.var_ocr_lang.get(),
+            "language": ocr_lang,
             "deskew": self.var_deskew.get(),
             "clean": self.var_clean.get(),
             "rotate": self.var_rotate.get(),
@@ -581,6 +606,11 @@ class BiplobOCR(TkinterDnD.Tk):
         # Load available and previously selected
         from ..core.ocr_engine import get_available_languages
         avail = get_available_languages()
+        
+        # Filter internal packs from Scan view availability
+        internal_packs = app_state.get("internal_packs", [])
+        avail = [l for l in avail if l not in internal_packs]
+
         last_used = app_state.get("last_used_ocr_languages")
         if not last_used: last_used = [app_state.get("ocr_language", "eng")]
         
@@ -749,52 +779,94 @@ class BiplobOCR(TkinterDnD.Tk):
             row = ttk.Frame(self.packs_scroll_frame, padding=5)
             row.pack(fill="x", pady=1)
             
-            # Icon/Name
+            # Icon/Name/Status
             icon = "🔴" if is_disabled else "🟢"
-            lbl = ttk.Label(row, text=f"{icon} {clean_name}", font=("Segoe UI", 9))
+            
+            # Check if internal
+            internal_list = app_state.get("internal_packs", [])
+            is_internal = clean_name in internal_list
+            
+            display_text = f"{icon} {clean_name}"
+            if is_internal: display_text += " (Internal)"
+            
+            lbl = ttk.Label(row, text=display_text, font=("Segoe UI", 9))
             if is_disabled: lbl.config(foreground="gray")
+            elif is_internal: lbl.config(foreground="orange")
             lbl.pack(side="left", padx=5)
             
+            # Context Menu Logic
+            def show_context_menu(event, name=clean_name, internal=is_internal):
+                menu = tk.Menu(self, tearoff=0)
+                if internal:
+                    menu.add_command(label="Mark as External (Public)", command=lambda: toggle_internal(name, False))
+                else:
+                    menu.add_command(label="Mark as Internal (Hidden)", command=lambda: toggle_internal(name, True))
+                menu.tk_popup(event.x_root, event.y_root)
+            
+            def toggle_internal(name, make_internal):
+                current = app_state.get("internal_packs", [])
+                if make_internal:
+                    if name not in current: current.append(name)
+                else:
+                    if name in current: current.remove(name)
+                
+                app_state.set_option("internal_packs", current)
+                app_state.save_config({})
+                self.refresh_data_packs_ui() # Refresh UI
+                
+                # Update language lists elsewhere? Technically they will update on next view rebuild,
+                # but might need immediate refresh if user goes back to scan.
+                # Ideally, we should trigger a reload of available langs.
+                # For now, simplistic refresh of settings UI is enough feedback.
+
+            # Bind right click
+            lbl.bind("<Button-3>", show_context_menu)
+            row.bind("<Button-3>", show_context_menu)
+
             # Actions
             if clean_name == "osd.traineddata":
                 ttk.Label(row, text="(System)", font=("Segoe UI", 8), foreground="gray").pack(side="right", padx=10)
-                continue # Protect OSD
-                
-            def toggle_disable(fname=f, disabled=is_disabled):
-                src = os.path.join(d, fname)
-                if disabled:
-                    dst = os.path.join(d, fname.replace(".disabled", ""))
-                else:
-                    dst = os.path.join(d, fname + ".disabled")
-                try:
-                    os.rename(src, dst)
-                    self.refresh_data_packs_ui()
-                    # Refresh lang list
-                    from ..core.ocr_engine import get_available_languages
-                    self.avail_langs = get_available_languages()
-                    self.cb_ocr_lang['values'] = self.avail_langs
-                    if self.var_ocr_lang.get() not in self.avail_langs: self.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
-
-                except Exception as e:
-                    messagebox.showerror("Error", str(e))
-
-            def delete_pack(fname=f):
-                if messagebox.askyesno("Confirm", f"Delete {fname}?"):
+                # OSD can still be marked internal/external via right click, but cannot be deleted/disabled.
+                # If user wants to "mark internal" they can.
+            else:
+                def toggle_disable(fname=f, disabled=is_disabled):
+                    src = os.path.join(d, fname)
+                    if disabled:
+                        dst = os.path.join(d, fname.replace(".disabled", ""))
+                    else:
+                        dst = os.path.join(d, fname + ".disabled")
                     try:
-                        os.remove(os.path.join(d, fname))
+                        os.rename(src, dst)
                         self.refresh_data_packs_ui()
+                        # Refresh lang list
                         from ..core.ocr_engine import get_available_languages
                         self.avail_langs = get_available_languages()
+                        # Re-filter internal logic for combobox?
+                        # Settings combobox should probably show ALL (or follow same rules? usually all to select default)
+                        # We'll leave combobox showing all for now or update it.
                         self.cb_ocr_lang['values'] = self.avail_langs
                         if self.var_ocr_lang.get() not in self.avail_langs: self.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
+    
                     except Exception as e:
                         messagebox.showerror("Error", str(e))
-
-            btn_del = ttk.Button(row, text="🗑", width=3, command=delete_pack, style="Danger.TButton")
-            btn_del.pack(side="right", padx=2)
-            
-            btn_toggle = ttk.Button(row, text="Enable" if is_disabled else "Disable", width=8, command=toggle_disable)
-            btn_toggle.pack(side="right", padx=2)
+    
+                def delete_pack(fname=f):
+                    if messagebox.askyesno("Confirm", f"Delete {fname}?"):
+                        try:
+                            os.remove(os.path.join(d, fname))
+                            self.refresh_data_packs_ui()
+                            from ..core.ocr_engine import get_available_languages
+                            self.avail_langs = get_available_languages()
+                            self.cb_ocr_lang['values'] = self.avail_langs
+                            if self.var_ocr_lang.get() not in self.avail_langs: self.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
+                        except Exception as e:
+                            messagebox.showerror("Error", str(e))
+    
+                btn_del = ttk.Button(row, text="🗑", width=3, command=delete_pack, style="Danger.TButton")
+                btn_del.pack(side="right", padx=2)
+                
+                btn_toggle = ttk.Button(row, text="Enable" if is_disabled else "Disable", width=8, command=toggle_disable)
+                btn_toggle.pack(side="right", padx=2)
 
     def add_data_pack(self):
         from ..core.ocr_engine import get_tessdata_dir
