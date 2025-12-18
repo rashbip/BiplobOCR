@@ -24,12 +24,14 @@ class HistoryManager:
         with open(HISTORY_FILE, "w") as f:
             json.dump(self.history, f, indent=4)
 
-    def add_entry(self, filename, status, size="N/A"):
+    def add_entry(self, filename, status, size="N/A", source_path=None, output_path=None):
         entry = {
             "filename": filename,
             "date": time.strftime("%Y-%m-%d %H:%M:%S"),
             "size": size,
-            "status": status
+            "status": status,
+            "source_path": source_path,
+            "output_path": output_path
         }
         self.history.insert(0, entry) # Prepend
         self.save_history()

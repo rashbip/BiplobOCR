@@ -391,14 +391,14 @@ class BiplobOCR(TkinterDnD.Tk):
         self.btn_process.config(state="normal")
         self.lbl_status.config(text="Cancelled")
         fname = os.path.basename(self.current_pdf_path) if self.current_pdf_path else "Unknown"
-        history.add_entry(fname, "Cancelled")
+        history.add_entry(fname, "Cancelled", source_path=self.current_pdf_path)
     
     def on_process_fail(self, msg):
         self.hide_global_status()
         self.btn_process.config(state="normal")
         self.lbl_status.config(text="Failed.")
         fname = os.path.basename(self.current_pdf_path) if self.current_pdf_path else "Unknown"
-        history.add_entry(fname, "Failed")
+        history.add_entry(fname, "Failed", source_path=self.current_pdf_path)
         messagebox.showerror("Error", msg)
 
     def on_process_success(self, temp_out, sidecar):
@@ -407,7 +407,7 @@ class BiplobOCR(TkinterDnD.Tk):
         self.lbl_status.config(text=app_state.t("lbl_status_done"))
         fname = os.path.basename(self.current_pdf_path)
         size_mb = os.path.getsize(temp_out) / (1024*1024)
-        history.add_entry(fname, "Completed", f"{size_mb:.1f} MB")
+        history.add_entry(fname, "Completed", f"{size_mb:.1f} MB", source_path=self.current_pdf_path, output_path=temp_out)
         self.show_success_ui(temp_out, sidecar)
 
     # --- BATCH ---
@@ -503,7 +503,7 @@ class BiplobOCR(TkinterDnD.Tk):
                 if self.stop_processing_flag: raise Exception("Process Cancelled")
                      
                 self.after(0, lambda id=item_id: self.batch_tree.set(id, "Status", "✅ Done"))
-                history.add_entry(fname, "Batch Success", "N/A")
+                history.add_entry(fname, "Batch Success", "N/A", source_path=fpath, output_path=out_path)
                 success_count += 1
                 
             except Exception as e:
@@ -512,10 +512,10 @@ class BiplobOCR(TkinterDnD.Tk):
                 if "Process Cancelled" in err_msg or self.stop_processing_flag:
                     status = "⛔ Cancelled"
                     self.after(0, lambda id=item_id: self.batch_tree.set(id, "Status", status))
-                    history.add_entry(fname, "Batch Cancelled")
+                    history.add_entry(fname, "Batch Cancelled", source_path=fpath)
                     break 
                 self.after(0, lambda id=item_id: self.batch_tree.set(id, "Status", status))
-                history.add_entry(fname, "Batch Failed")
+                history.add_entry(fname, "Batch Failed", source_path=fpath)
             
             self.after(0, lambda v=(i+1)*100: self.global_progress.configure(value=v))
         
