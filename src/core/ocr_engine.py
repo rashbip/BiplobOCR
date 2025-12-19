@@ -202,9 +202,11 @@ def _run_cmd(cmd, env, progress_callback=None):
             env=env, start_new_session=True, bufsize=1, universal_newlines=True
         )
     else:
+        # Combine creation flags: New Process Group + No Window
+        cflags = subprocess.CREATE_NEW_PROCESS_GROUP | 0x08000000 # CREATE_NO_WINDOW
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
-            env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, 
+            env=env, creationflags=cflags, 
             startupinfo=startupinfo, bufsize=1, universal_newlines=True
         )
 
@@ -454,8 +456,9 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
     # The previous prompt replaced definition only.
     # I'll paste the definition + logic.
     
-    # 1. Prepare Base CMD
-    base_cmd = ["ocrmypdf"]
+    # 1. Prepare Base CMD - Use Python module execution for reliability
+    # This ensures ocrmypdf works even if Scripts folder isn't in PATH
+    base_cmd = [sys.executable, "-m", "ocrmypdf"]
     if force: base_cmd.append("--force-ocr")
     else: base_cmd.append("--skip-text")
 
@@ -562,8 +565,8 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
     """
     Internal function to run OCR on a single file (not password protected).
     """
-    # 1. Prepare Base CMD
-    base_cmd = ["ocrmypdf"]
+    # 1. Prepare Base CMD - Use Python module execution for reliability
+    base_cmd = [sys.executable, "-m", "ocrmypdf"]
     if force: base_cmd.append("--force-ocr")
     else: base_cmd.append("--skip-text")
 

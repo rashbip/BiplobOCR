@@ -18,7 +18,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={userdocs}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 ; License file
 LicenseFile=LICENSE.txt
@@ -36,8 +36,9 @@ MinVersion=6.1sp1
 ; Architecture
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Privileges
-PrivilegesRequired=admin
+; Privileges - Install for current user by default to avoid permission issues
+PrivilegesRequired=lowest
+PrivilegesRequiredOverridesAllowed=dialog
 ; UI
 WizardStyle=modern
 DisableProgramGroupPage=yes
@@ -57,6 +58,8 @@ Source: "..\src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs cr
 Source: "..\run.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
+Source: "..\BiplobOCR.vbs"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\BiplobOCR.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Python installer helper
 Source: "python_installer.py"; DestDir: "{app}\installer"; Flags: ignoreversion
@@ -65,22 +68,22 @@ Source: "python_installer.py"; DestDir: "{app}\installer"; Flags: ignoreversion
 Source: "..\src\*"; DestDir: "{app}\src"; Excludes: "__pycache__,*.pyc,*.pyo,*.log,*_temp,config.json,history.json"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-; Start Menu
-Name: "{group}\{#MyAppName}"; Filename: "pythonw.exe"; Parameters: """{app}\{#MyAppExeName}"""; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icon.ico"; Tasks: startmenu
+; Start Menu - Use wscript to run vbs for silent execution
+Name: "{group}\{#MyAppName}"; Filename: "wscript.exe"; Parameters: """{app}\BiplobOCR.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icon.ico"; Tasks: startmenu
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"; Tasks: startmenu
 
 ; Desktop
-Name: "{autodesktop}\{#MyAppName}"; Filename: "pythonw.exe"; Parameters: """{app}\{#MyAppExeName}"""; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icon.ico"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "wscript.exe"; Parameters: """{app}\BiplobOCR.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icon.ico"; Tasks: desktopicon
 
 ; Quick Launch
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "pythonw.exe"; Parameters: """{app}\{#MyAppExeName}"""; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icon.ico"; Tasks: quicklaunch
+Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "wscript.exe"; Parameters: """{app}\BiplobOCR.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\src\assets\icon.ico"; Tasks: quicklaunch
 
 [Run]
 ; Run Python installer wizard
 Filename: "python"; Parameters: """{app}\installer\python_installer.py"""; StatusMsg: "Setting up Python environment..."; Flags: runhidden waituntilterminated
 
-; Option to launch after install
-Filename: "pythonw.exe"; Parameters: """{app}\{#MyAppExeName}"""; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; Option to launch after install - use vbs for silent execution
+Filename: "wscript.exe"; Parameters: """{app}\BiplobOCR.vbs"""; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 ; Clean up temp files, cache, and configs on uninstall

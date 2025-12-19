@@ -118,7 +118,8 @@ if ($LASTEXITCODE -eq 0) {
             Start-Process "explorer.exe" -ArgumentList "/select,`"$($outputFile.FullName)`""
         }
     }
-} else {
+}
+else {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Red
     Write-Host "  BUILD FAILED!" -ForegroundColor Red
