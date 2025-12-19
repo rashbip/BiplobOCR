@@ -3,8 +3,8 @@
 ; Download from: https://jrsoftware.org/isinfo.php
 
 #define MyAppName "BiplobOCR"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "BiplobOCR Team"
+#define MyAppVersion "2.2"
+#define MyAppPublisher "Rashidul Hasan Biplob"
 #define MyAppURL "https://github.com/rashbip/BiplobOCR"
 #define MyAppExeName "run.py"
 #define MyAppMainScript "src\main.py"
