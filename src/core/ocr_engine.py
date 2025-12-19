@@ -13,33 +13,6 @@ from .constants import APP_NAME, TEMP_DIR
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Monkey patch subprocess.Popen on Windows to suppress console windows
-if sys.platform == "win32":
-    _Popen = subprocess.Popen
-    class SilentPopen(_Popen):
-        def __init__(self, *args, **kwargs):
-            if 'startupinfo' not in kwargs:
-                si = subprocess.STARTUPINFO()
-                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                kwargs['startupinfo'] = si
-            
-            # Ensure proper window suppression flags
-            # CREATE_NO_WINDOW = 0x08000000
-            if 'creationflags' not in kwargs:
-                kwargs['creationflags'] = 0x08000000
-            else:
-                kwargs['creationflags'] |= 0x08000000
-                
-            super().__init__(*args, **kwargs)
-                 
-    subprocess.Popen = SilentPopen
-
-try:
-    import ocrmypdf
-except ImportError:
-    ocrmypdf = None
-    logging.warning("ocrmypdf module not found.")
-
 # Try importing dependencies safely to avoid immediate crashes
 try:
     import fitz  # PyMuPDF
@@ -220,7 +193,8 @@ def _run_cmd(cmd, env, progress_callback=None):
     startupinfo = None
     if os.name == 'nt': 
         startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.dwFlags = subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
     
     # Process creation: Use new session/process group to allow clean termination
     if os.name == 'posix':
@@ -232,7 +206,7 @@ def _run_cmd(cmd, env, progress_callback=None):
         # Combine creation flags: New Process Group + No Window
         cflags = subprocess.CREATE_NEW_PROCESS_GROUP | 0x08000000 # CREATE_NO_WINDOW
         proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True, 
             env=env, creationflags=cflags, 
             startupinfo=startupinfo, bufsize=1, universal_newlines=True
         )
@@ -475,60 +449,6 @@ def _run_cmd(cmd, env, progress_callback=None, log_callback=None):
 
 def _run_ocr_single(input_path, output_path, force, options, progress_callback, log_callback=None):
     """
-    Main OCR entry point. Tries in-process API first to prevent window flashing, then fallback.
-    """
-    if ocrmypdf:
-        try:
-            sidecar_file = output_path.replace(".pdf", ".txt")
-            
-            # Setup logging capture
-            class LogCapture(logging.Handler):
-                def emit(self, record):
-                    msg = self.format(record)
-                    if log_callback: log_callback(msg)
-                    m = re.search(r'(?:Page|Scanning page)\s+(\d+)', msg, re.IGNORECASE)
-                    if m and progress_callback: progress_callback(int(m.group(1)))
-            
-            h = LogCapture()
-            l = logging.getLogger("ocrmypdf")
-            l.setLevel(logging.INFO)
-            l.addHandler(h)
-            
-            kwargs = {
-                "input_file": input_path,
-                "output_file": output_path,
-                "force_ocr": force,
-                "skip_text": not force,
-                "output_type": "pdf",
-                "sidecar": sidecar_file,
-                "verbose": 1,
-                "progress_bar": False,
-                "keep_temporary_files": False
-            }
-            
-            if options:
-                if options.get("deskew"): kwargs["deskew"] = True
-                if options.get("clean"): kwargs["clean"] = True
-                if options.get("rotate"): kwargs["rotate_pages"] = True
-                if options.get("optimize", "0") != "0": kwargs["optimize"] = int(options.get("optimize"))
-                if options.get("language"): kwargs["language"] = options.get("language")
-                if options.get("max_cpu_threads"): kwargs["jobs"] = int(options.get("max_cpu_threads"))
-                
-                # GPU / Config args could be added here if needed
-                # if options.get("use_gpu"): ...
-
-            ocrmypdf.ocr(**kwargs)
-            l.removeHandler(h)
-            return sidecar_file
-            
-        except Exception as e:
-            logging.warning(f"API OCR failed: {e}. Falling back to subprocess...")
-            # Fall through to subprocess
-            
-    return _run_ocr_single_subprocess(input_path, output_path, force, options, progress_callback, log_callback)
-
-def _run_ocr_single_subprocess(input_path, output_path, force, options, progress_callback, log_callback=None):
-    """
     Internal function to run OCR on a single file (not password protected).
     """
     # ... (Command builder omitted for brevity, logic remains same but passes log_callback)
@@ -562,6 +482,7 @@ def _run_ocr_single_subprocess(input_path, output_path, force, options, progress
 
     # Thread/Job Control
     env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8" # Force UTF-8 for subprocess logging
     safe_jobs = 1
     if options:
         safe_jobs = max(1, int(options.get("max_cpu_threads", 2)))
