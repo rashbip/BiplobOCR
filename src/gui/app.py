@@ -9,6 +9,7 @@ import shutil
 import os
 import sys
 import subprocess
+import webbrowser
 import pikepdf
 
 # Local imports
@@ -145,8 +146,10 @@ class BiplobOCR(TkinterDnD.Tk):
         self.footer_frame = ttk.Frame(self.sidebar, padding=20)
         self.footer_frame.pack(side="bottom", fill="x")
         self.btn_settings = self._create_nav_btn(app_state.t("nav_settings"), "settings", parent=self.footer_frame)
-        ttk.Label(self.footer_frame, text=app_state.t("lbl_help"), foreground="gray", 
-                  cursor="hand2").pack(anchor="w", pady=(10, 0))
+        self.lbl_help = ttk.Label(self.footer_frame, text=app_state.t("lbl_help"), foreground="gray", 
+                  cursor="hand2")
+        self.lbl_help.pack(anchor="w", pady=(10, 0))
+        self.lbl_help.bind("<Button-1>", lambda e: self._open_help_url())
 
     def _build_status_bar(self):
         """Build the global status bar."""
@@ -206,9 +209,11 @@ class BiplobOCR(TkinterDnD.Tk):
         elif tab == "scan":
             self.view_scan.pack(fill="both", expand=True)
             self.btn_tools.configure(style="Accent.TButton")
+            self.view_scan.refresh_languages()  # Refresh language list
         elif tab == "batch":
             self.view_batch.pack(fill="both", expand=True)
             self.btn_batch.configure(style="Accent.TButton")
+            self.view_batch.refresh_languages()  # Refresh language list
         elif tab == "history":
             self.view_history.pack(fill="both", expand=True)
             self.btn_history.configure(style="Accent.TButton")
@@ -216,6 +221,10 @@ class BiplobOCR(TkinterDnD.Tk):
         elif tab == "settings":
             self.view_settings.pack(fill="both", expand=True)
             self.btn_settings.configure(style="Accent.TButton")
+
+    def _open_help_url(self):
+        """Open the help documentation URL in the default web browser."""
+        webbrowser.open("https://rashidul.is-a.dev/BiplobOCRdocs/")
 
     # ==================== LOG VIEW ====================
     

@@ -25,13 +25,13 @@ class BatchView(ttk.Frame):
         paned.pack(fill="both", expand=True)
 
         # --- Sidebar (Options) ---
-        sidebar = ttk.Frame(paned, width=300, padding=(0, 0, 10, 0))
-        paned.add(sidebar, weight=0)
+        self.sidebar = ttk.Frame(paned, width=300, padding=(0, 0, 10, 0))
+        paned.add(self.sidebar, weight=0)
         
-        ttk.Label(sidebar, text=app_state.t("lbl_batch_opts"), style="Header.TLabel").pack(anchor="w", pady=(20, 10))
+        ttk.Label(self.sidebar, text=app_state.t("lbl_batch_opts"), style="Header.TLabel").pack(anchor="w", pady=(20, 10))
         
         # Options Group
-        opt_frame = ttk.LabelFrame(sidebar, text=app_state.t("grp_options"), padding=10)
+        opt_frame = ttk.LabelFrame(self.sidebar, text=app_state.t("grp_options"), padding=10)
         opt_frame.pack(fill="x", pady=5)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_deskew"), variable=self.controller.var_deskew).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_clean"), variable=self.controller.var_clean).pack(anchor="w", pady=2)
@@ -41,34 +41,18 @@ class BatchView(ttk.Frame):
         ttk.Combobox(opt_frame, textvariable=self.controller.var_optimize, values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
 
         # Languages Group
-        lang_frame = ttk.LabelFrame(sidebar, text="Processing Languages", padding=10)
-        lang_frame.pack(fill="x", pady=15)
+        self.lang_frame = ttk.LabelFrame(self.sidebar, text="Processing Languages", padding=10)
+        self.lang_frame.pack(fill="x", pady=15)
         
-        # Load available - Reuse logic? Or direct import.
-        from ...core.ocr_engine import get_available_languages
-        avail = get_available_languages()
-        last_used = app_state.get("last_used_ocr_languages")
-        if not last_used: last_used = [app_state.get("ocr_language", "eng")]
-
-        lc = tk.Canvas(lang_frame, bg=SURFACE_COLOR, highlightthickness=0, height=150)
-        ls = ttk.Scrollbar(lang_frame, orient="vertical", command=lc.yview)
-        lf = ttk.Frame(lc, style="Card.TFrame")
+        # Container for dynamic language list
+        self.lang_container = ttk.Frame(self.lang_frame)
+        self.lang_container.pack(fill="x", expand=True)
         
-        lf.bind("<Configure>", lambda e: lc.configure(scrollregion=lc.bbox("all")))
-        lc.create_window((0, 0), window=lf, anchor="nw")
-        lc.configure(yscrollcommand=ls.set)
-        
-        lc.pack(side="left", fill="x", expand=True)
-        ls.pack(side="right", fill="y")
-        
-        self.controller.batch_lang_vars = {}
-        for l in avail:
-            var = tk.BooleanVar(value=(l in last_used))
-            ttk.Checkbutton(lf, text=l, variable=var).pack(anchor="w")
-            self.controller.batch_lang_vars[l] = var
+        # Build initial language list
+        self._build_language_checkboxes()
 
         # Action Button (Start)
-        self.controller.btn_start_batch = ttk.Button(sidebar, text=app_state.t("btn_start_batch"), command=self.controller.start_batch_processing, style="Accent.TButton")
+        self.controller.btn_start_batch = ttk.Button(self.sidebar, text=app_state.t("btn_start_batch"), command=self.controller.start_batch_processing, style="Accent.TButton")
         self.controller.btn_start_batch.pack(fill="x", pady=20)
 
 
@@ -91,3 +75,37 @@ class BatchView(ttk.Frame):
         self.controller.batch_tree.heading("Status", text=app_state.t("col_status"))
         self.controller.batch_tree.column("Filename", width=400)
         self.controller.batch_tree.column("Status", width=150)
+
+    def _build_language_checkboxes(self):
+        """Build or rebuild the language checkboxes."""
+        # Clear existing
+        for widget in self.lang_container.winfo_children():
+            widget.destroy()
+        
+        # Load available and previously selected
+        from ...core.ocr_engine import get_available_languages
+        avail = get_available_languages()
+        last_used = app_state.get("last_used_ocr_languages")
+        if not last_used:
+            last_used = [app_state.get("ocr_language", "eng")]
+
+        lc = tk.Canvas(self.lang_container, bg=SURFACE_COLOR, highlightthickness=0, height=150)
+        ls = ttk.Scrollbar(self.lang_container, orient="vertical", command=lc.yview)
+        lf = ttk.Frame(lc, style="Card.TFrame")
+        
+        lf.bind("<Configure>", lambda e: lc.configure(scrollregion=lc.bbox("all")))
+        lc.create_window((0, 0), window=lf, anchor="nw")
+        lc.configure(yscrollcommand=ls.set)
+        
+        lc.pack(side="left", fill="x", expand=True)
+        ls.pack(side="right", fill="y")
+        
+        self.controller.batch_lang_vars = {}
+        for l in avail:
+            var = tk.BooleanVar(value=(l in last_used))
+            ttk.Checkbutton(lf, text=l, variable=var).pack(anchor="w")
+            self.controller.batch_lang_vars[l] = var
+
+    def refresh_languages(self):
+        """Refresh the language list from available data packs."""
+        self._build_language_checkboxes()

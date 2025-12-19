@@ -1,0 +1,76 @@
+BIPLOB OCR - TERMS OF SERVICE AND END USER LICENSE AGREEMENT
+
+Last Updated: December 2024
+
+IMPORTANT: PLEASE READ THIS AGREEMENT CAREFULLY BEFORE INSTALLING OR USING BIPLOB OCR.
+
+By installing, copying, or otherwise using BiplobOCR ("Software"), you agree to be bound by the terms of this End User License Agreement ("Agreement"). If you do not agree to the terms of this Agreement, do not install or use the Software.
+
+1. LICENSE GRANT
+
+Subject to the terms of this Agreement, the developer grants you a limited, non-exclusive, non-transferable license to:
+   a) Install and use the Software on your personal computer(s) for personal or commercial purposes.
+   b) Make backup copies of the Software for archival purposes.
+
+2. RESTRICTIONS
+
+You may NOT:
+   a) Modify, reverse engineer, decompile, or disassemble the Software.
+   b) Rent, lease, or lend the Software to third parties.
+   c) Remove or alter any proprietary notices, labels, or marks on the Software.
+   d) Use the Software for any unlawful purpose.
+
+3. INTELLECTUAL PROPERTY
+
+The Software and all copies thereof are proprietary to the developer and title to all copies is retained by the developer. The Software is copyrighted and is protected by copyright laws and international treaty provisions.
+
+4. THIRD-PARTY COMPONENTS
+
+This Software uses the following third-party components, each subject to their own licenses:
+   - Tesseract OCR (Apache License 2.0)
+   - Leptonica (BSD 2-Clause License)
+   - Python and pip packages (various open source licenses)
+   - ICU - International Components for Unicode (ICU License)
+
+5. DISCLAIMER OF WARRANTIES
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+6. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL THE DEVELOPER BE LIABLE FOR ANY SPECIAL, INCIDENTAL, INDIRECT, OR CONSEQUENTIAL DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION, OR ANY OTHER PECUNIARY LOSS) ARISING OUT OF THE USE OF OR INABILITY TO USE THE SOFTWARE.
+
+7. DATA PRIVACY
+
+BiplobOCR processes documents locally on your machine. No data is transmitted to external servers unless explicitly stated. The Software does not collect personal information.
+
+8. PYTHON INSTALLATION
+
+This Software requires Python to be installed on your system. During installation, you may be prompted to:
+   a) Allow automatic installation of Python from python.org
+   b) Manually install Python yourself
+   c) Configure an existing Python installation
+
+By proceeding with automatic Python installation, you agree to Python's license terms available at: https://docs.python.org/3/license.html
+
+9. TERMINATION
+
+This Agreement is effective until terminated. Your rights under this Agreement will terminate automatically without notice if you fail to comply with any of its terms.
+
+10. GOVERNING LAW
+
+This Agreement shall be governed by and construed in accordance with the laws of your jurisdiction.
+
+11. ENTIRE AGREEMENT
+
+This Agreement constitutes the entire agreement between the parties with respect to the use of the Software and supersedes all prior or contemporaneous understandings regarding such subject matter.
+
+12. CONTACT
+
+For questions regarding this Agreement, please contact the developer.
+
+---
+
+BY CLICKING "I ACCEPT" OR INSTALLING THE SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS AGREEMENT, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS AND CONDITIONS.
+
+© 2024 BiplobOCR. All Rights Reserved.

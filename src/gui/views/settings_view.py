@@ -157,6 +157,29 @@ class SettingsView(ttk.Frame):
             except Exception as e:
                 messagebox.showerror("Error", f"Reset failed: {e}")
 
+    def _refresh_all_language_lists(self):
+        """Refresh language lists in all views after data pack changes."""
+        # Refresh this view
+        self.refresh_data_packs_ui()
+        self.avail_langs = get_available_languages()
+        self.cb_ocr_lang['values'] = self.avail_langs
+        if self.controller.var_ocr_lang.get() not in self.avail_langs:
+            self.controller.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
+        
+        # Refresh scan view if exists
+        if hasattr(self.controller, 'view_scan') and self.controller.view_scan:
+            try:
+                self.controller.view_scan.refresh_languages()
+            except Exception:
+                pass
+        
+        # Refresh batch view if exists
+        if hasattr(self.controller, 'view_batch') and self.controller.view_batch:
+            try:
+                self.controller.view_batch.refresh_languages()
+            except Exception:
+                pass
+
     def refresh_data_packs_ui(self):
         """Refresh the data packs list UI."""
         for w in self.packs_scroll_frame.winfo_children():
@@ -198,11 +221,7 @@ class SettingsView(ttk.Frame):
                         dst = os.path.join(d, fname + ".disabled")
                     try:
                         os.rename(src, dst)
-                        self.refresh_data_packs_ui()
-                        self.avail_langs = get_available_languages()
-                        self.cb_ocr_lang['values'] = self.avail_langs
-                        if self.controller.var_ocr_lang.get() not in self.avail_langs:
-                            self.controller.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
+                        self._refresh_all_language_lists()
                     except Exception as e:
                         messagebox.showerror("Error", str(e))
                 return toggle_disable
@@ -212,11 +231,7 @@ class SettingsView(ttk.Frame):
                     if messagebox.askyesno("Confirm", f"Delete {fname}?"):
                         try:
                             os.remove(os.path.join(d, fname))
-                            self.refresh_data_packs_ui()
-                            self.avail_langs = get_available_languages()
-                            self.cb_ocr_lang['values'] = self.avail_langs
-                            if self.controller.var_ocr_lang.get() not in self.avail_langs:
-                                self.controller.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
+                            self._refresh_all_language_lists()
                         except Exception as e:
                             messagebox.showerror("Error", str(e))
                 return delete_pack
@@ -249,9 +264,7 @@ class SettingsView(ttk.Frame):
             messagebox.showinfo("Success", f"Installed {os.path.basename(f)}")
             
             # Refresh Lists
-            self.refresh_data_packs_ui()
-            self.avail_langs = get_available_languages()
-            self.cb_ocr_lang['values'] = self.avail_langs
+            self._refresh_all_language_lists()
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to install data pack: {e}")

@@ -49,33 +49,15 @@ class ScanView(ttk.Frame):
                      values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
 
         # Multi-Select Languages
-        lang_frame = ttk.LabelFrame(self.scan_sidebar, text="Processing Languages", padding=10)
-        lang_frame.pack(fill="x", pady=10)
+        self.lang_frame = ttk.LabelFrame(self.scan_sidebar, text="Processing Languages", padding=10)
+        self.lang_frame.pack(fill="x", pady=10)
         
-        # Load available and previously selected
-        avail = get_available_languages()
-        last_used = app_state.get("last_used_ocr_languages")
-        if not last_used:
-            last_used = [app_state.get("ocr_language", "eng")]
+        # Container for dynamic language list
+        self.lang_container = ttk.Frame(self.lang_frame)
+        self.lang_container.pack(fill="x", expand=True)
         
-        # Scrollable container for langs with FIXED HEIGHT
-        lc = tk.Canvas(lang_frame, bg=SURFACE_COLOR, highlightthickness=0, height=120)
-        ls = ttk.Scrollbar(lang_frame, orient="vertical", command=lc.yview)
-        lf = ttk.Frame(lc, style="Card.TFrame")
-        
-        lf.bind("<Configure>", lambda e: lc.configure(scrollregion=lc.bbox("all")))
-        lc.create_window((0, 0), window=lf, anchor="nw")
-        lc.configure(yscrollcommand=ls.set)
-        
-        lc.pack(side="left", fill="x", expand=True)
-        ls.pack(side="right", fill="y")
-        
-        self.controller.scan_lang_vars = {}
-        for l in avail:
-            var = tk.BooleanVar(value=(l in last_used))
-            btn = ttk.Checkbutton(lf, text=l, variable=var)
-            btn.pack(anchor="w")
-            self.controller.scan_lang_vars[l] = var
+        # Build initial language list
+        self._build_language_checkboxes()
 
         # Process Button
         self.controller.btn_process = ttk.Button(
@@ -100,3 +82,38 @@ class ScanView(ttk.Frame):
         self.controller.viewer.pack(fill="both", expand=True)
         
         self.controller.success_frame = ttk.Frame(self.viewer_container, style="Card.TFrame", padding=20)
+
+    def _build_language_checkboxes(self):
+        """Build or rebuild the language checkboxes."""
+        # Clear existing
+        for widget in self.lang_container.winfo_children():
+            widget.destroy()
+        
+        # Load available and previously selected
+        avail = get_available_languages()
+        last_used = app_state.get("last_used_ocr_languages")
+        if not last_used:
+            last_used = [app_state.get("ocr_language", "eng")]
+        
+        # Scrollable container for langs with FIXED HEIGHT
+        lc = tk.Canvas(self.lang_container, bg=SURFACE_COLOR, highlightthickness=0, height=120)
+        ls = ttk.Scrollbar(self.lang_container, orient="vertical", command=lc.yview)
+        lf = ttk.Frame(lc, style="Card.TFrame")
+        
+        lf.bind("<Configure>", lambda e: lc.configure(scrollregion=lc.bbox("all")))
+        lc.create_window((0, 0), window=lf, anchor="nw")
+        lc.configure(yscrollcommand=ls.set)
+        
+        lc.pack(side="left", fill="x", expand=True)
+        ls.pack(side="right", fill="y")
+        
+        self.controller.scan_lang_vars = {}
+        for l in avail:
+            var = tk.BooleanVar(value=(l in last_used))
+            btn = ttk.Checkbutton(lf, text=l, variable=var)
+            btn.pack(anchor="w")
+            self.controller.scan_lang_vars[l] = var
+
+    def refresh_languages(self):
+        """Refresh the language list from available data packs."""
+        self._build_language_checkboxes()
