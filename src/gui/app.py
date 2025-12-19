@@ -401,10 +401,6 @@ class BiplobOCR(TkinterDnD.Tk):
             def log_cb(msg):
                 self.log_bridge(msg)
             
-            def text_cb(txt):
-                if hasattr(self, 'log_window') and self.log_window.winfo_exists():
-                    self.after(0, lambda: self.log_window.append_text(txt))
-
             self.after(0, lambda: self.global_progress.config(mode="determinate", maximum=100, value=0))
             
             sidecar = run_ocr(
@@ -414,8 +410,7 @@ class BiplobOCR(TkinterDnD.Tk):
                 self.var_force.get(),
                 options=opts,
                 progress_callback=update_prog,
-                log_callback=log_cb,
-                text_callback=text_cb
+                log_callback=log_cb
             )
             
             if self.stop_processing_flag: raise Exception("Process Cancelled")
@@ -585,11 +580,7 @@ class BiplobOCR(TkinterDnD.Tk):
                 except: 
                     raise Exception("Password Required")
 
-                def text_cb(txt):
-                    if hasattr(self, 'log_window') and self.log_window.winfo_exists():
-                        self.after(0, lambda: self.log_window.append_text(txt))
-
-                run_ocr(fpath, out_path, None, force=True, options=opts, progress_callback=batch_prog_cb, log_callback=log_cb, text_callback=text_cb)
+                run_ocr(fpath, out_path, None, force=True, options=opts, progress_callback=batch_prog_cb, log_callback=log_cb)
                 
                 if self.stop_processing_flag: raise Exception("Process Cancelled")
                      
