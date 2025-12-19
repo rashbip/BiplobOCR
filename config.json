@@ -1,9 +1,8 @@
 {
     "theme": "dark",
-    "language": "en",
+    "language": "bn",
     "ocr_language": "eng",
     "last_used_ocr_languages": [
-        "ben",
         "eng"
     ],
     "deskew": false,
@@ -13,5 +12,5 @@
     "optimize": "0",
     "use_gpu": false,
     "gpu_device": "Auto",
-    "max_cpu_threads": 2
+    "max_cpu_threads": 3
 }
