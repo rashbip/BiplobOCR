@@ -221,6 +221,7 @@ class BiplobOCR(TkinterDnD.Tk):
         elif tab == "settings":
             self.view_settings.pack(fill="both", expand=True)
             self.btn_settings.configure(style="Accent.TButton")
+            self.view_settings.refresh_ocr_languages()  # Refresh OCR language dropdown
 
     def _open_help_url(self):
         """Open the help documentation URL in the default web browser."""

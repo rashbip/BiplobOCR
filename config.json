@@ -1,8 +1,9 @@
 {
     "theme": "dark",
     "language": "bn",
-    "ocr_language": "eng",
+    "ocr_language": "ben",
     "last_used_ocr_languages": [
+        "ben",
         "eng"
     ],
     "deskew": false,

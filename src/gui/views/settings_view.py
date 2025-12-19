@@ -161,10 +161,7 @@ class SettingsView(ttk.Frame):
         """Refresh language lists in all views after data pack changes."""
         # Refresh this view
         self.refresh_data_packs_ui()
-        self.avail_langs = get_available_languages()
-        self.cb_ocr_lang['values'] = self.avail_langs
-        if self.controller.var_ocr_lang.get() not in self.avail_langs:
-            self.controller.var_ocr_lang.set(self.avail_langs[0] if self.avail_langs else "eng")
+        self.refresh_ocr_languages()
         
         # Refresh scan view if exists
         if hasattr(self.controller, 'view_scan') and self.controller.view_scan:
@@ -179,6 +176,16 @@ class SettingsView(ttk.Frame):
                 self.controller.view_batch.refresh_languages()
             except Exception:
                 pass
+
+    def refresh_ocr_languages(self):
+        """Refresh the OCR language dropdown with available data packs."""
+        self.avail_langs = get_available_languages()
+        self.cb_ocr_lang['values'] = self.avail_langs
+        
+        # If current selection is not in available, reset to first available
+        current = self.controller.var_ocr_lang.get()
+        if current not in self.avail_langs and self.avail_langs:
+            self.controller.var_ocr_lang.set(self.avail_langs[0])
 
     def refresh_data_packs_ui(self):
         """Refresh the data packs list UI."""
