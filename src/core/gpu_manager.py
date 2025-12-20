@@ -4,10 +4,11 @@ import os
 
 def get_available_gpus():
     """
-    Detects available GPUs on Windows using PowerShell.
+    Detects available GPUs on Windows (PowerShell) and Linux (lspci).
     Returns a list of strings including CPU and GPUs.
     """
     devices = ["CPU (Default)"]
+    
     if os.name == 'nt':
         try:
             # PowerShell is often more reliable/cleaner than wmic for this
@@ -32,6 +33,24 @@ def get_available_gpus():
                         devices.append(clean)
             except: 
                 pass
+    elif os.name == 'posix':
+        # Linux/Mac
+        try:
+            # Try lspci
+            cmd = ["lspci"]
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            if proc.returncode == 0:
+                lines = proc.stdout.strip().split('\n')
+                for line in lines:
+                    if "VGA" in line or "3D controller" in line or "Display controller" in line:
+                         # Extract the device name (usually after the address)
+                         parts = line.split(":", 2) 
+                         if len(parts) > 2:
+                             clean = parts[2].strip()
+                             if clean and clean not in devices:
+                                 devices.append(clean)
+        except:
+            pass
             
     return devices
 

@@ -9,6 +9,7 @@ import sys
 import math
 import logging
 from .constants import APP_NAME, TEMP_DIR
+from . import platform_utils
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -34,38 +35,11 @@ class OCRError(Exception):
     """Custom Exception for OCR errors to provide better user feedback."""
     pass
 
-def setup_tesseract_environment():
-    """Confingure environment to use bundled Tesseract from src/tesseract/windows."""
-    try:
-        # Calculate paths relative to this file (src/core/ocr_engine.py)
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # -> src
-        tess_bin = os.path.join(base_dir, "tesseract", "windows")
-        tess_data = os.path.join(tess_bin, "tessdata")
-        
-        # Check if exists
-        tess_exe = os.path.join(tess_bin, "tesseract.exe")
-        if not os.path.exists(tess_exe):
-            logging.warning(f"Bundled Tesseract not found at: {tess_exe}. Utilizing system PATH.")
-            return
-
-        # Prepend to PATH so it takes precedence over system installs
-        os.environ["PATH"] = tess_bin + os.pathsep + os.environ["PATH"]
-        
-        # Set TESSDATA_PREFIX if not already set or force it
-        os.environ["TESSDATA_PREFIX"] = tess_data
-        
-        logging.info(f"Using bundled Tesseract: {tess_exe}")
-        logging.info(f"Tessdata Prefix: {tess_data}")
-        
-    except Exception as e:
-        logging.error(f"Failed to setup local Tesseract: {e}")
-
 # Initialize environment immediately
-setup_tesseract_environment()
+platform_utils.setup_tesseract_environment()
 
 def get_tessdata_dir():
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_dir, "tesseract", "windows", "tessdata")
+    return platform_utils.get_tessdata_dir()
 
 def get_available_languages():
     d = get_tessdata_dir()
@@ -129,17 +103,7 @@ def cancel_ocr():
     
     if ACTIVE_PROCESS:
         try:
-            logging.info(f"Terminating process: {ACTIVE_PROCESS.pid}")
-            
-            # Kill the entire process tree to ensure Tesseract/Ghostscript also die
-            if os.name == 'nt':
-                # Windows: /F (Force) /T (Tree) /PID
-                subprocess.run(["taskkill", "/F", "/T", "/PID", str(ACTIVE_PROCESS.pid)], 
-                               creationflags=subprocess.CREATE_NO_WINDOW)
-            else:
-                # Unix: Kill process group
-                os.killpg(os.getpgid(ACTIVE_PROCESS.pid), signal.SIGTERM)
-                
+            platform_utils.kill_process_tree(ACTIVE_PROCESS.pid)
             ACTIVE_PROCESS = None
         except Exception as e:
             logging.error(f"Error killing process: {e}")
@@ -183,64 +147,7 @@ def _merge_pdfs(pdf_list, output_path):
     merger.save(output_path)
     merger.close()
 
-def _run_cmd(cmd, env, progress_callback=None):
-    """
-    Executes a subprocess command and handles output/progress parsing.
-    Captures stderr for progress updates from OCRmyPDF/Tesseract.
-    """
-    global ACTIVE_PROCESS
-    
-    startupinfo = None
-    if os.name == 'nt': 
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags = subprocess.STARTF_USESHOWWINDOW
-        startupinfo.wShowWindow = subprocess.SW_HIDE
-    
-    # Process creation: Use new session/process group to allow clean termination
-    if os.name == 'posix':
-        proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
-            env=env, start_new_session=True, bufsize=1, universal_newlines=True
-        )
-    else:
-        # Combine creation flags: New Process Group + No Window
-        cflags = subprocess.CREATE_NEW_PROCESS_GROUP | 0x08000000 # CREATE_NO_WINDOW
-        proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True, 
-            env=env, creationflags=cflags, 
-            startupinfo=startupinfo, bufsize=1, universal_newlines=True
-        )
 
-    ACTIVE_PROCESS = proc
-
-    stderr_output = []
-    
-    # Read stderr line by line for progress
-    while True:
-        line = proc.stderr.readline()
-        if not line and proc.poll() is not None: break
-        if line:
-            stderr_output.append(line)
-            # OCRmyPDF/Tesseract progress pattern: "INFO - Page X" or "Scanning page X"
-            # Adjust regex based on actual CLI output of ocrmypdf
-            match = re.search(r'(?:INFO\s+-\s+|Page\s+|Scanning page\s+)(\d+)', line, re.IGNORECASE)
-            if match and progress_callback:
-                try: 
-                    # Report the strict page number being processed
-                    progress_callback(int(match.group(1)))
-                except: pass
-    
-    rc = proc.poll()
-    out = proc.stdout.read()
-    err = "".join(stderr_output)
-    ACTIVE_PROCESS = None
-
-    if rc != 0:
-        logging.error(f"Command failed with RC {rc}: {cmd}")
-        logging.error(f"STDERR ({len(err)} chars): {err}")
-        raise subprocess.CalledProcessError(rc, cmd, output=out, stderr=err)
-    
-    return out, err
 
 def run_ocr(input_path, output_path, password=None, force=False, options=None, progress_callback=None, log_callback=None):
     """
@@ -394,23 +301,28 @@ def _run_cmd(cmd, env, progress_callback=None, log_callback=None):
     """
     global ACTIVE_PROCESS
     
-    startupinfo = None
-    if os.name == 'nt': 
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo = platform_utils.get_subprocess_startup_info()
     
     # Process creation: Use new session/process group to allow cleanup
+    # On POSIX, start_new_session=True is the way to go (setsid)
+    # On Windows, CREATE_NEW_PROCESS_GROUP
+    
+    kwargs = {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+        "env": env,
+        "bufsize": 1,
+        "universal_newlines": True
+    }
+    
     if os.name == 'posix':
-        proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
-            env=env, start_new_session=True, bufsize=1, universal_newlines=True
-        )
+        kwargs["start_new_session"] = True
     else:
-        proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, 
-            env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, 
-            startupinfo=startupinfo, bufsize=1, universal_newlines=True
-        )
+        kwargs["creationflags"] = platform_utils.get_subprocess_creation_flags()
+        kwargs["startupinfo"] = startupinfo
+        
+    proc = subprocess.Popen(cmd, **kwargs)
 
     ACTIVE_PROCESS = proc
 
