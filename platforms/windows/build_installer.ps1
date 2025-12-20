@@ -40,20 +40,23 @@ Write-Host ""
 
 # Clean previous builds
 Write-Host "Cleaning previous builds..." -ForegroundColor Yellow
-if (Test-Path "installer\output") {
-    Remove-Item "installer\output\*" -Recurse -Force -ErrorAction SilentlyContinue
+if (Test-Path ".\installer\output") {
+    Remove-Item ".\installer\output\*" -Recurse -Force -ErrorAction SilentlyContinue
 }
-New-Item -ItemType Directory -Path "installer\output" -Force | Out-Null
+New-Item -ItemType Directory -Path ".\installer\output" -Force | Out-Null
 
 # Clean temporary files
 Write-Host "Cleaning temporary files..." -ForegroundColor Yellow
-Get-ChildItem -Path "src" -Recurse -Filter "__pycache__" -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-Get-ChildItem -Path "." -Recurse -Filter "*.pyc" | Remove-Item -Force -ErrorAction SilentlyContinue
-Get-ChildItem -Path "." -Recurse -Filter "*.pyo" | Remove-Item -Force -ErrorAction SilentlyContinue
-Get-ChildItem -Path "." -Recurse -Filter "*.log" | Remove-Item -Force -ErrorAction SilentlyContinue
+# Path relative to script (platforms/windows) -> get to root ../../
+$rootDir = Resolve-Path "..\.."
 
-if (Test-Path "_biplob_temp") {
-    Remove-Item "_biplob_temp" -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path "$rootDir\src" -Recurse -Filter "__pycache__" -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path "$rootDir" -Recurse -Filter "*.pyc" | Remove-Item -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path "$rootDir" -Recurse -Filter "*.pyo" | Remove-Item -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path "$rootDir" -Recurse -Filter "*.log" | Remove-Item -Force -ErrorAction SilentlyContinue
+
+if (Test-Path "$rootDir\_biplob_temp") {
+    Remove-Item "$rootDir\_biplob_temp" -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host "Cleanup complete!" -ForegroundColor Green
@@ -66,9 +69,9 @@ $requiredFiles = @(
     "installer\setup.iss",
     "installer\LICENSE.txt",
     "installer\python_installer.py",
-    "src\assets\icon.ico",
-    "run.py",
-    "requirements.txt"
+    "$rootDir\src\assets\icon.ico",
+    "$rootDir\run.py",
+    "$rootDir\requirements.txt"
 )
 
 $missing = @()

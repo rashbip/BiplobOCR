@@ -7,7 +7,7 @@
 #define MyAppPublisher "Rashidul Hasan Biplob"
 #define MyAppURL "https://github.com/rashbip/BiplobOCR"
 #define MyAppExeName "run.py"
-#define MyAppMainScript "src\main.py"
+#define MyAppMainScript "..\..\..\src\main.py"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -26,7 +26,7 @@ LicenseFile=LICENSE.txt
 OutputDir=output
 OutputBaseFilename=BiplobOCR-Setup-{#MyAppVersion}
 ; Icon
-SetupIconFile=..\src\assets\icon.ico
+SetupIconFile=..\..\..\src\assets\icon.ico
 UninstallDisplayIcon={app}\src\assets\icon.ico
 ; Compression
 Compression=lzma2/max
@@ -54,10 +54,11 @@ Name: "quicklaunch"; Description: "Create Quick Launch shortcut"; GroupDescripti
 
 [Files]
 ; Main application files
-Source: "..\src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\run.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
+Source: "..\..\..\src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\..\run.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\..\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
+; These files are now in the parent dir of this iss file (installer is in platforms/windows/installer, bat/vbs in platforms/windows)
 Source: "..\BiplobOCR.vbs"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\BiplobOCR.bat"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -65,7 +66,8 @@ Source: "..\BiplobOCR.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "python_installer.py"; DestDir: "{app}\installer"; Flags: ignoreversion
 
 ; Exclude cache and temp files
-Source: "..\src\*"; DestDir: "{app}\src"; Excludes: "__pycache__,*.pyc,*.pyo,*.log,*_temp,config.json,history.json"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Exclude cache and temp files
+Source: "..\..\..\src\*"; DestDir: "{app}\src"; Excludes: "__pycache__,*.pyc,*.pyo,*.log,*_temp,config.json,history.json"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Start Menu - Use wscript to run vbs for silent execution

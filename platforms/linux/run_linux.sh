@@ -2,7 +2,7 @@
 # Linux Launcher for BiplobOCR
 
 # Ensure we are in the script's directory
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 
 # Check for virtual environment
 if [ -d "venv" ]; then
