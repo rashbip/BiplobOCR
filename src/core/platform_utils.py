@@ -31,6 +31,29 @@ def get_tesseract_executable_name():
     """Returns the platform-specific executable name."""
     return "tesseract.exe" if IS_WINDOWS else "tesseract"
 
+def get_python_executable():
+    """Returns the path to the bundled Python executable if it exists, otherwise sys.executable."""
+    base_dir = get_base_dir()
+    if IS_WINDOWS:
+        bundled_python = os.path.join(base_dir, "python", "windows", "python.exe")
+        if os.path.exists(bundled_python):
+            return bundled_python
+    # For Linux/others, we will implement later as requested
+    return sys.executable
+
+def setup_python_environment():
+    """Configure environment for bundled Python (like adding site-packages)."""
+    if IS_WINDOWS:
+        base_dir = get_base_dir()
+        python_dir = os.path.join(base_dir, "python", "windows")
+        site_packages = os.path.join(python_dir, "Lib", "site-packages")
+        
+        if os.path.exists(site_packages):
+            if site_packages not in sys.path:
+                sys.path.append(site_packages)
+            os.environ["PYTHONPATH"] = site_packages + os.pathsep + os.environ.get("PYTHONPATH", "")
+            logging.info(f"Added bundled site-packages to path: {site_packages}")
+
 def setup_tesseract_environment():
     """Configure environment to use bundled Tesseract if available."""
     try:

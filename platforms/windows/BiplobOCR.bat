@@ -1,6 +1,12 @@
 @echo off
-REM BiplobOCR Launcher
-REM This batch file ensures proper working directory and Python execution
-
+setlocal
 cd /d "%~dp0..\.."
-py "%~dp0..\..\run.py" %*
+
+set BUNDLED_PYTHON=src\python\windows\python.exe
+
+if exist "%BUNDLED_PYTHON%" (
+    "%BUNDLED_PYTHON%" run.py %*
+) else (
+    py run.py %*
+)
+endlocal
