@@ -48,6 +48,17 @@ def setup_python_environment():
         python_dir = os.path.join(base_dir, "python", "windows")
         site_packages = os.path.join(python_dir, "Lib", "site-packages")
         
+        # Set TCL/TK libraries for the GUI to work in the bundle
+        tcl_path = os.path.join(python_dir, "tcl", "tcl8.6")
+        tk_path = os.path.join(python_dir, "tcl", "tk8.6")
+        
+        if os.path.exists(tcl_path):
+            os.environ["TCL_LIBRARY"] = tcl_path
+            logging.info(f"Set TCL_LIBRARY: {tcl_path}")
+        if os.path.exists(tk_path):
+            os.environ["TK_LIBRARY"] = tk_path
+            logging.info(f"Set TK_LIBRARY: {tk_path}")
+        
         if os.path.exists(site_packages):
             if site_packages not in sys.path:
                 sys.path.append(site_packages)
