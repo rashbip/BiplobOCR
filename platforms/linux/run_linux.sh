@@ -9,5 +9,5 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
-# Run the application
-python3 src/main.py
+# Run the application through the root run.py to ensure correct sys.path and environment
+python3 run.py

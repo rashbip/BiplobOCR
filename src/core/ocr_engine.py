@@ -311,6 +311,7 @@ def _run_cmd(cmd, env, progress_callback=None, log_callback=None):
         "stdout": subprocess.PIPE,
         "stderr": subprocess.PIPE,
         "text": True,
+        "encoding": "utf-8",
         "env": env,
         "bufsize": 1,
         "universal_newlines": True
