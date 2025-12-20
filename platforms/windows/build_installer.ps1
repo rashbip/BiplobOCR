@@ -1,136 +1,41 @@
-# BiplobOCR Installer Build Script
-# This script helps build the Windows installer
+# BiplobOCR Simple Build Script
+# This script bundles the app into a single installer using Inno Setup.
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  BiplobOCR Installer Build Script" -ForegroundColor Cyan
+Write-Host "  BiplobOCR Simple Build Script" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
 
-# Check if Inno Setup is installed
-$innoSetupPaths = @(
-    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-    "${env:ProgramFiles}\Inno Setup 6\ISCC.exe",
-    "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
-    "C:\Program Files\Inno Setup 6\ISCC.exe"
-)
-
-$isccPath = $null
-foreach ($path in $innoSetupPaths) {
-    if (Test-Path $path) {
-        $isccPath = $path
-        break
-    }
+# 1. Verification
+$isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+if (-not (Test-Path $isccPath)) {
+    $isccPath = "C:\Program Files\Inno Setup 6\ISCC.exe"
 }
 
-if (-not $isccPath) {
-    Write-Host "ERROR: Inno Setup not found!" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Please install Inno Setup 6 from:" -ForegroundColor Yellow
-    Write-Host "https://jrsoftware.org/isdl.php" -ForegroundColor Yellow
-    Write-Host ""
-    $download = Read-Host "Open download page? (Y/N)"
-    if ($download -eq "Y" -or $download -eq "y") {
-        Start-Process "https://jrsoftware.org/isdl.php"
-    }
+if (-not (Test-Path $isccPath)) {
+    Write-Host "ERROR: Inno Setup 6 not found. Please install it." -ForegroundColor Red
     exit 1
 }
 
-Write-Host "Found Inno Setup: $isccPath" -ForegroundColor Green
-Write-Host ""
-
-# Clean previous builds
-Write-Host "Cleaning previous builds..." -ForegroundColor Yellow
-if (Test-Path ".\installer\output") {
-    Remove-Item ".\installer\output\*" -Recurse -Force -ErrorAction SilentlyContinue
-}
-New-Item -ItemType Directory -Path ".\installer\output" -Force | Out-Null
-
-# Clean temporary files
-Write-Host "Cleaning temporary files..." -ForegroundColor Yellow
-# Path relative to script (platforms/windows) -> get to root ../../
+# 2. Cleanup Noise
+Write-Host "Pruning cache and temporary files..." -ForegroundColor Yellow
 $rootDir = Resolve-Path "..\.."
 
-Get-ChildItem -Path "$rootDir\src" -Recurse -Filter "__pycache__" -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-Get-ChildItem -Path "$rootDir" -Recurse -Filter "*.pyc" | Remove-Item -Force -ErrorAction SilentlyContinue
-Get-ChildItem -Path "$rootDir" -Recurse -Filter "*.pyo" | Remove-Item -Force -ErrorAction SilentlyContinue
-Get-ChildItem -Path "$rootDir" -Recurse -Filter "*.log" | Remove-Item -Force -ErrorAction SilentlyContinue
+# Remove Python/Tesseract cache and temp files
+Get-ChildItem -Path "$rootDir" -Recurse -Include "__pycache__" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+Get-ChildItem -Path "$rootDir" -Recurse -Include "*.pyc", "*.pyo", "*.log" -ErrorAction SilentlyContinue | Remove-Item -Force
+if (Test-Path "$rootDir\_biplob_temp") { Remove-Item "$rootDir\_biplob_temp" -Recurse -Force }
+if (Test-Path "$rootDir\config.json") { Remove-Item "$rootDir\config.json" -Force }
+if (Test-Path "$rootDir\history.json") { Remove-Item "$rootDir\history.json" -Force }
 
-if (Test-Path "$rootDir\_biplob_temp") {
-    Remove-Item "$rootDir\_biplob_temp" -Recurse -Force -ErrorAction SilentlyContinue
-}
-
-Write-Host "Cleanup complete!" -ForegroundColor Green
-Write-Host ""
-
-# Verify required files exist
-Write-Host "Verifying required files..." -ForegroundColor Yellow
-
-$requiredFiles = @(
-    "installer\setup.iss",
-    "installer\LICENSE.txt",
-    "installer\python_installer.py",
-    "$rootDir\src\assets\icon.ico",
-    "$rootDir\run.py",
-    "$rootDir\requirements.txt"
-)
-
-$missing = @()
-foreach ($file in $requiredFiles) {
-    if (-not (Test-Path $file)) {
-        $missing += $file
-    }
-}
-
-if ($missing.Count -gt 0) {
-    Write-Host "ERROR: Missing required files:" -ForegroundColor Red
-    foreach ($file in $missing) {
-        Write-Host "  - $file" -ForegroundColor Red
-    }
-    exit 1
-}
-
-Write-Host "All required files present!" -ForegroundColor Green
-Write-Host ""
-
-# Build installer
-Write-Host "Building installer..." -ForegroundColor Cyan
-Write-Host ""
-
-$buildResult = & $isccPath "installer\setup.iss"
+# 3. Build Explorer
+Write-Host "Building Installer (LZMA2 Maximum Compression)..." -ForegroundColor Cyan
+& $isccPath "installer\setup.iss"
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host ""
-    Write-Host "========================================" -ForegroundColor Green
-    Write-Host "  BUILD SUCCESSFUL!" -ForegroundColor Green
-    Write-Host "========================================" -ForegroundColor Green
-    Write-Host ""
-    
-    # Find the output file
-    $outputFiles = Get-ChildItem "installer\output\*.exe"
-    if ($outputFiles.Count -gt 0) {
-        $outputFile = $outputFiles[0]
-        $sizeInMB = [math]::Round($outputFile.Length / 1MB, 2)
-        
-        Write-Host "Installer created:" -ForegroundColor Green
-        Write-Host "  Path: $($outputFile.FullName)" -ForegroundColor White
-        Write-Host "  Size: $sizeInMB MB" -ForegroundColor White
-        Write-Host ""
-        
-        $openFolder = Read-Host "Open output folder? (Y/N)"
-        if ($openFolder -eq "Y" -or $openFolder -eq "y") {
-            Start-Process "explorer.exe" -ArgumentList "/select,`"$($outputFile.FullName)`""
-        }
-    }
+    Write-Host "`nSUCCESS! Installer created in platforms\windows\installer\output\" -ForegroundColor Green
+    $output = Get-ChildItem "installer\output\*.exe" | Select-Object -First 1
+    Write-Host "Size: $([math]::Round($output.Length / 1MB, 2)) MB" -ForegroundColor White
 }
 else {
-    Write-Host ""
-    Write-Host "========================================" -ForegroundColor Red
-    Write-Host "  BUILD FAILED!" -ForegroundColor Red
-    Write-Host "========================================" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Check the output above for errors." -ForegroundColor Yellow
-    exit 1
+    Write-Host "`nBUILD FAILED!" -ForegroundColor Red
 }
-
-Write-Host ""
-Write-Host "Build process completed!" -ForegroundColor Cyan

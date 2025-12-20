@@ -3,37 +3,41 @@ import os
 import subprocess
 
 # 1. Enforcement Logic
-# BiplobOCR is designed to run using its bundled Windows Python to ensure 
-# all dependencies (Tesseract, PDF libraries) are consistent.
+# BiplobOCR is designed to run using its bundled Windows Python.
 def bootstrap():
     # Only enforce on Windows
     if os.name == 'nt' and "BIPLO_OCR_BOOTSTRAPPED" not in os.environ:
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        bundled_py = os.path.join(base_dir, "src", "python", "windows", "python.exe")
+        python_dir = os.path.join(base_dir, "src", "python", "windows")
+        bundled_pyw = os.path.join(python_dir, "pythonw.exe")
+        bundled_py = os.path.join(python_dir, "python.exe")
         
-        if not os.path.exists(bundled_py):
-            print(f"CRITICAL ERROR: Bundled Python not found at {bundled_py}")
-            print("Please ensure the project is complete before running.")
+        # 1. Check if we are already running from the bundled folder
+        current_exe = os.path.abspath(sys.executable).lower()
+        bundle_path_abs = os.path.abspath(python_dir).lower()
+        
+        if current_exe.startswith(bundle_path_abs):
+            return # We are already in the right place!
+
+        # 2. Not in bundle? Re-launch using bundled pythonw.exe (Silent)
+        exe_to_use = bundled_pyw if os.path.exists(bundled_pyw) else bundled_py
+        
+        if not os.path.exists(exe_to_use):
+            print(f"CRITICAL ERROR: Bundled Python not found at {python_dir}")
             sys.exit(1)
 
-        current_exe = os.path.abspath(sys.executable).lower()
-        target_exe = os.path.abspath(bundled_py).lower()
+        # Set a flag to prevent infinite loops
+        env = os.environ.copy()
+        env["BIPLO_OCR_BOOTSTRAPPED"] = "1"
+        env["PYTHONPATH"] = base_dir + os.pathsep + env.get("PYTHONPATH", "")
         
-        if current_exe != target_exe:
-            # Set a flag to prevent infinite loops
-            env = os.environ.copy()
-            env["BIPLO_OCR_BOOTSTRAPPED"] = "1"
-            env["PYTHONPATH"] = base_dir + os.pathsep + env.get("PYTHONPATH", "")
-            
-            # Re-launch using the bundled Python
-            try:
-                # Use creationflags=0x08000000 (CREATE_NO_WINDOW) if we want silent boot, 
-                # but for run.py we usually want to see errors.
-                result = subprocess.run([bundled_py] + sys.argv, env=env)
-                sys.exit(result.returncode)
-            except Exception as e:
-                print(f"CRITICAL ERROR: Failed to launch bundled Python: {e}")
-                sys.exit(1)
+        try:
+            # Re-launch and exit
+            subprocess.Popen([exe_to_use] + sys.argv, env=env)
+            sys.exit(0)
+        except Exception as e:
+            print(f"CRITICAL ERROR: Failed to launch bundled Python: {e}")
+            sys.exit(1)
 
 if __name__ == "__main__":
     bootstrap()
