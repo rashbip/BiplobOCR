@@ -292,7 +292,9 @@ class ProcessingController:
                             self.app.status_controller.update_batch_status_detail(v, idx, total_docs, n, p, t, e))
 
                     if hasattr(self.app, 'log_window') and self.app.log_window.winfo_exists():
-                        self.app.after(0, lambda: self.app.log_window.update_image(fpath, p-1))
+                        current_fpath = fpath
+                        current_page = p - 1
+                        self.app.after(0, lambda fp=current_fpath, pg=current_page: self.app.log_window.update_image(fp, pg))
 
                 def log_cb(msg):
                     self.app.log_bridge(msg)
