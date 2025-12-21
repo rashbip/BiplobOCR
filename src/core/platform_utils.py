@@ -132,9 +132,9 @@ def get_tessdata_dir():
     return os.path.join(base_dir, "tesseract", get_tesseract_dir_name(), "tessdata")
 
 def setup_fonts():
-    """Register custom fonts from assets folder."""
+    """Register custom fonts from assets folder. Returns font family name on success, None on failure."""
     if not IS_WINDOWS:
-        return
+        return None
 
     try:
         import ctypes
@@ -147,10 +147,15 @@ def setup_fonts():
             res = ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
             if res:
                 logging.info(f"Successfully loaded custom font: {font_path}")
+                return "Li Ador Noirrit"  # Internal font family name
             else:
                 logging.warning(f"Failed to load font with AddFontResourceExW: {font_path}")
+                return None
+        return None
     except Exception as e:
         logging.error(f"Error loading custom fonts: {e}")
+        return None
+
 
 def kill_process_tree(pid):
     """Terminates a process and its children in a platform-independent way."""
