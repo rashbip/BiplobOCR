@@ -27,7 +27,6 @@ history.json
 
 # Installer Build
 installer/output/
-*.exe
 !installer/python_installer.py
 
 # Keep tracking requirements.txt and other source files
