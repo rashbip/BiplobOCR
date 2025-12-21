@@ -24,10 +24,14 @@ _biplob_temp/
 *.log
 config.json
 history.json
+test_*.py
 
-# Installer Build
-installer/output/
-!installer/python_installer.py
+# Installer Build Output
+platforms/windows/installer/output/
+*.exe
+
+# Temp files
+src/python/temp_extract/
+src/python/*.zip
 
 # Keep tracking requirements.txt and other source files
-
