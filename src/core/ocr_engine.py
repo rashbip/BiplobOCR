@@ -341,8 +341,13 @@ def _run_cmd(cmd, env, progress_callback=None, log_callback=None):
                 try: log_callback(line.rstrip())
                 except: pass
                 
-            # OCRmyPDF/Tesseract progress pattern
-            match = re.search(r'(?:INFO\s+-\s+|Page\s+|Scanning page\s+)(\d+)', line, re.IGNORECASE)
+            # OCRmyPDF/Tesseract progress patterns:
+            # 1. Start of line: "    7 Text rotation..."
+            # 2. Keywords: "Scanning page 1", "INFO - 1", "Page 1"
+            match = re.search(r'^\s*(\d+)\s+', line)
+            if not match:
+                match = re.search(r'(?:INFO\s+-\s+|Page\s+|Scanning page\s+)(\d+)', line, re.IGNORECASE)
+            
             if match and progress_callback:
                 try: 
                     progress_callback(int(match.group(1)))

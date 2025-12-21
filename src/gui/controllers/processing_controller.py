@@ -51,7 +51,13 @@ class ProcessingController:
 
         self.app.btn_process.config(state="disabled")
         self.stop_flag = False
-        self.app.status_controller.show_global_status(app_state.t("lbl_status_processing"))
+        
+        # Determine if we can show determinate progress immediately
+        determinate = False
+        if self.app.viewer and self.app.viewer.pdf_path == self.app.current_pdf_path:
+            determinate = True
+            
+        self.app.status_controller.show_global_status(app_state.t("lbl_status_processing"), determinate=determinate)
         
         thread = threading.Thread(target=self._run_process_logic)
         thread.daemon = True
@@ -111,6 +117,8 @@ class ProcessingController:
             def log_cb(msg):
                 self.app.log_bridge(msg)
             
+            # Switch to determinate immediately since we have total_pages
+            self.app.after(0, lambda: self.app.status_controller.show_global_status(app_state.t("lbl_status_processing"), determinate=True))
             self.app.after(0, lambda: self.app.global_progress.config(mode="determinate", maximum=100, value=0))
             
             sidecar = run_ocr(
@@ -289,12 +297,7 @@ class ProcessingController:
                         etr_str = f"{etr//60}m {etr%60}s"
                         
                         self.app.after(0, lambda v=global_val, p=p, t=doc_total_pages, n=fname, idx=i+1, e=etr_str: 
-                            self.app.status_controller.update_batch_status_detail(v, idx, total_docs, n, p, t, e))
-
-                    if hasattr(self.app, 'log_window') and self.app.log_window.winfo_exists():
-                        current_fpath = fpath
-                        current_page = p - 1
-                        self.app.after(0, lambda fp=current_fpath, pg=current_page: self.app.log_window.update_image(fp, pg))
+                            self.app.status_controller.update_batch_status_detail(v, idx, total_docs, n, p, t, e, fpath))
 
                 def log_cb(msg):
                     self.app.log_bridge(msg)
