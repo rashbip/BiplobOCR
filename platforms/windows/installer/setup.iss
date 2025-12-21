@@ -2,7 +2,7 @@
 ; A simple, self-contained installer that uses the bundled Python environment.
 
 #define MyAppName "BiplobOCR"
-#define MyAppVersion "3.2"
+#define MyAppVersion "3.3"
 #define MyAppPublisher "Rashidul Hasan Biplob"
 #define MyAppURL "https://github.com/rashbip/BiplobOCR"
 #define MyAppExeName "BiplobOCR.vbs"
@@ -41,7 +41,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 ; Copy everything from project root, excluding noise
-Source: "..\..\..\*"; DestDir: "{app}"; Excludes: ".git*,.vscode,.agent,.idea,*.log,config.json,history.json,platforms\linux,platforms\windows\installer\output\*,src\python\windows\Lib\site-packages\__pycache__\*,**/__pycache__/*,**/*.pyc,**/*.pyo"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Excludes: dev files, other platforms, temp, cache, tests, docs
+Source: "..\..\..\*"; DestDir: "{app}"; Excludes: ".git*,.vscode,.agent,.idea,*.log,config.json,history.json,platforms\linux,platforms\macos,platforms\windows\installer\output\*,src\python\temp_extract,src\python\*.zip,src\tesseract\linux,src\tesseract\macos,tests,*.md,*.spec,biplob_ocr_old.py,test_*.py,**\__pycache__\*,**\*.pyc,**\*.pyo,**\*.pdb,**\*.lib"; Flags: ignoreversion recursesubdirs createallsubdirs
+
 
 [Icons]
 ; Start Menu

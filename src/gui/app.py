@@ -130,7 +130,7 @@ class BiplobOCR(TkinterDnD.Tk):
         self.sidebar_header.pack(fill="x")
         ttk.Label(self.sidebar_header, text="📜 BiplobOCR", style="Header.TLabel", 
                   font=(HEADER_FONT, 18, "bold"), foreground=THEME_COLOR).pack(anchor="w")
-        ttk.Label(self.sidebar_header, text="Version 2.2", font=(MAIN_FONT, 8), 
+        ttk.Label(self.sidebar_header, text="Version 3.3", font=(MAIN_FONT, 8), 
                   foreground="gray").pack(anchor="w")
 
         # Navigation
