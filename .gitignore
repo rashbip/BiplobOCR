@@ -6,7 +6,7 @@ __pycache__/
 # Distribution / Packaging
 dist/
 build/
-*.spec
+# *.spec (Allowing spec files for build reproducibility)
 *.egg-info/
 
 # Virtual Environments
