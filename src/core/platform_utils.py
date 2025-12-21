@@ -5,10 +5,23 @@ import logging
 import subprocess
 import signal
 
-# Platform constants
 IS_WINDOWS = os.name == 'nt'
 IS_LINUX = sys.platform.startswith('linux')
 IS_MAC = sys.platform == 'darwin'
+
+def to_linux_path(path):
+    """Translates a Windows path to a Linux path if running on Linux (WSL)."""
+    if not IS_LINUX or not path:
+        return path
+        
+    # Translate D:\ to /mnt/d/
+    if len(path) > 2 and path[1:3] == ":\\":
+        drive = path[0].lower()
+        suffix = path[3:].replace('\\', '/')
+        linux_path = f"/mnt/{drive}/{suffix}"
+        return linux_path
+        
+    return path
 
 def get_base_dir():
     """Returns the base directory of the project (src items)."""
@@ -38,7 +51,12 @@ def get_python_executable():
         bundled_python = os.path.join(base_dir, "python", "windows", "python.exe")
         if os.path.exists(bundled_python):
             return bundled_python
-    # For Linux/others, we will implement later as requested
+    elif IS_LINUX:
+        # Check for venv python
+        bundled_python = os.path.join(base_dir, "python", "linux", "venv", "bin", "python")
+        if os.path.exists(bundled_python):
+            return bundled_python
+            
     return sys.executable
 
 def setup_python_environment():
@@ -100,19 +118,22 @@ def setup_tesseract_environment():
 def setup_ghostscript_environment():
     """Configure environment to use bundled Ghostscript if available."""
     try:
-        if not IS_WINDOWS:
-            # We will handle Linux/others later as requested
+        base_dir = get_base_dir()
+        
+        if IS_WINDOWS:
+            gs_bin = os.path.join(base_dir, "ghostscript", "windows", "bin")
+            gs_lib = os.path.join(base_dir, "ghostscript", "windows", "lib")
+        elif IS_LINUX:
+            gs_bin = os.path.join(base_dir, "ghostscript", "linux", "bin")
+            gs_lib = os.path.join(base_dir, "ghostscript", "linux", "lib")
+        else:
             return
 
-        base_dir = get_base_dir()
-        gs_bin = os.path.join(base_dir, "ghostscript", "windows", "bin")
-        gs_lib = os.path.join(base_dir, "ghostscript", "windows", "lib")
-        
         if not os.path.exists(gs_bin):
             logging.warning(f"Bundled Ghostscript not found at: {gs_bin}. Utilizing system PATH.")
             return
 
-        # Prepend to PATH - ocrmypdf looks for gswin64c.exe or gs.exe
+        # Prepend to PATH
         if gs_bin not in os.environ["PATH"]:
             os.environ["PATH"] = gs_bin + os.pathsep + os.environ["PATH"]
         
@@ -133,28 +154,45 @@ def get_tessdata_dir():
 
 def setup_fonts():
     """Register custom fonts from assets folder. Returns font family name on success, None on failure."""
-    if not IS_WINDOWS:
-        return None
-
     try:
-        import ctypes
         base_dir = get_base_dir()
         font_path = os.path.join(base_dir, "assets", "AdorNoirrit.ttf")
         
-        if os.path.exists(font_path):
-            # FR_PRIVATE = 0x10. The font is only available to the process that loaded it.
-            # FR_NOT_ENUM = 0x20. The font is not enumerated by GetFontFamily or similar.
+        if not os.path.exists(font_path):
+            return None
+
+        if IS_WINDOWS:
+            import ctypes
+            # FR_PRIVATE = 0x10.
             res = ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
             if res:
-                logging.info(f"Successfully loaded custom font: {font_path}")
-                return "Li Ador Noirrit"  # Internal font family name
-            else:
-                logging.warning(f"Failed to load font with AddFontResourceExW: {font_path}")
-                return None
+                logging.info(f"Successfully loaded custom font (Windows): {font_path}")
+                return "Li Ador Noirrit"
+        
+        elif IS_LINUX:
+            # On Linux, we copy the font to ~/.local/share/fonts and run fc-cache
+            home_dir = os.path.expanduser("~")
+            local_fonts_dir = os.path.join(home_dir, ".local", "share", "fonts")
+            os.makedirs(local_fonts_dir, exist_ok=True)
+            
+            target_font_path = os.path.join(local_fonts_dir, "AdorNoirrit.ttf")
+            import shutil
+            shutil.copy2(font_path, target_font_path)
+            
+            # Refresh font cache
+            try:
+                subprocess.run(["fc-cache", "-f", local_fonts_dir], check=False, 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                logging.info(f"Registered custom font for Linux: {target_font_path}")
+                return "Li Ador Noirrit"
+            except:
+                pass
+                
         return None
     except Exception as e:
         logging.error(f"Error loading custom fonts: {e}")
         return None
+
 
 
 def kill_process_tree(pid):

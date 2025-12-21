@@ -1,13 +1,19 @@
 #!/bin/bash
-# Linux Launcher for BiplobOCR
+# Linux Launcher for BiplobOCR - Prioritizes bundled environment
 
-# Ensure we are in the script's directory
-cd "$(dirname "$0")/../.."
+# Get project root (parent of parent of this script)
+PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$PROJECT_ROOT"
 
-# Check for virtual environment
-if [ -d "venv" ]; then
-    source venv/bin/activate
+# Path to bundled venv
+BUNDLED_VENV="$PROJECT_ROOT/src/python/linux/venv"
+
+if [ -d "$BUNDLED_VENV" ]; then
+    echo "Using bundled Python environment..."
+    source "$BUNDLED_VENV/bin/activate"
+else
+    echo "Bundled environment not found. Falling back to system python..."
 fi
 
-# Run the application through the root run.py to ensure correct sys.path and environment
+# Run the application
 python3 run.py

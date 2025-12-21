@@ -45,7 +45,9 @@ class LogView(tk.Toplevel):
     def update_image(self, pdf_path, page_num):
         """Renders the specific page from the PDF and displays it."""
         try:
-            doc = fitz.open(pdf_path)
+            from ...core.platform_utils import to_linux_path
+            linux_path = to_linux_path(pdf_path)
+            doc = fitz.open(linux_path)
             if page_num < 0 or page_num >= len(doc): return
             
             page = doc[page_num]
