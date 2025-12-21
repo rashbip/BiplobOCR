@@ -52,8 +52,20 @@ if __name__ == "__main__":
             sys.stderr.reconfigure(encoding='utf-8')
         except: pass
 
-    from src.core.platform_utils import setup_python_environment
+    from src.core.platform_utils import setup_python_environment, setup_tesseract_environment, setup_ghostscript_environment, setup_fonts
     setup_python_environment()
+    setup_tesseract_environment()
+    setup_ghostscript_environment()
+    loaded_font = setup_fonts()
+
+    # If font failed to load, set fallbacks in the theme
+    from src.core import theme
+    if not loaded_font:
+        theme.MAIN_FONT = "Segoe UI"
+        theme.HEADER_FONT = "Segoe UI"
+    else:
+        theme.MAIN_FONT = loaded_font
+        theme.HEADER_FONT = loaded_font
 
     from src.main import main
     main()

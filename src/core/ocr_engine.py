@@ -37,6 +37,7 @@ class OCRError(Exception):
 
 # Initialize environment immediately
 platform_utils.setup_tesseract_environment()
+platform_utils.setup_ghostscript_environment()
 
 def get_tessdata_dir():
     return platform_utils.get_tessdata_dir()

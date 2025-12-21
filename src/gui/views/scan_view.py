@@ -5,7 +5,7 @@ Extracted from app.py for better maintainability.
 import tkinter as tk
 from tkinter import ttk
 
-from ...core.theme import SURFACE_COLOR, THEME_COLOR
+from ...core.theme import SURFACE_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
 from ...core.ocr_engine import get_available_languages
 from ..pdf_viewer import PDFViewer
@@ -28,7 +28,7 @@ class ScanView(ttk.Frame):
         self.scan_sidebar = ttk.Frame(self.scan_paned, width=300, padding=15)
         self.scan_paned.add(self.scan_sidebar, weight=0)
         
-        ttk.Label(self.scan_sidebar, text="Active Task", font=("Segoe UI", 14, "bold"), 
+        ttk.Label(self.scan_sidebar, text="Active Task", font=(HEADER_FONT, 14, "bold"), 
                   foreground=THEME_COLOR).pack(anchor="w", pady=(0, 20))
         ttk.Button(self.scan_sidebar, text="📂 Open New PDF", 
                    command=self.controller.open_pdf).pack(fill="x", pady=2)

@@ -16,7 +16,7 @@ import pikepdf
 from ..core.constants import APP_NAME
 from ..core.config_manager import state as app_state
 from ..core.history_manager import history
-from ..core.theme import THEME_COLOR, BG_COLOR, SURFACE_COLOR
+from ..core.theme import THEME_COLOR, BG_COLOR, SURFACE_COLOR, MAIN_FONT, HEADER_FONT
 from ..core import gpu_manager
 
 # Controllers
@@ -129,8 +129,8 @@ class BiplobOCR(TkinterDnD.Tk):
         self.sidebar_header = ttk.Frame(self.sidebar, padding=20)
         self.sidebar_header.pack(fill="x")
         ttk.Label(self.sidebar_header, text="📜 BiplobOCR", style="Header.TLabel", 
-                  font=("Segoe UI Variable Display", 18, "bold"), foreground=THEME_COLOR).pack(anchor="w")
-        ttk.Label(self.sidebar_header, text="Version 2.2", font=("Segoe UI", 8), 
+                  font=(HEADER_FONT, 18, "bold"), foreground=THEME_COLOR).pack(anchor="w")
+        ttk.Label(self.sidebar_header, text="Version 2.2", font=(MAIN_FONT, 8), 
                   foreground="gray").pack(anchor="w")
 
         # Navigation
@@ -156,7 +156,7 @@ class BiplobOCR(TkinterDnD.Tk):
         self.status_bar = ttk.Frame(self.right_panel, style="Card.TFrame", padding=10)
         
         self.lbl_global_status = ttk.Label(self.status_bar, text="Processing...", 
-                                            background=SURFACE_COLOR, font=("Segoe UI", 10, "bold"))
+                                            background=SURFACE_COLOR, font=(MAIN_FONT, 10, "bold"))
         self.lbl_global_status.pack(side="left", padx=10)
         
         self.global_progress = ttk.Progressbar(self.status_bar, mode="indeterminate", 
@@ -333,7 +333,7 @@ class BiplobOCR(TkinterDnD.Tk):
         
         c = ttk.Frame(self.success_frame, style="Card.TFrame")
         c.place(relx=0.5, rely=0.5, anchor="center")
-        ttk.Label(c, text="✅ " + app_state.t("msg_success"), font=("Segoe UI", 24), 
+        ttk.Label(c, text="✅ " + app_state.t("msg_success"), font=(MAIN_FONT, 24), 
                   background=SURFACE_COLOR).pack(pady=10)
         
         def save_pdf():

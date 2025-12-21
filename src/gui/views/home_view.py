@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 from tkinterdnd2 import DND_FILES
 import os
 from ...core.history_manager import history
-from ...core.theme import SURFACE_COLOR, THEME_COLOR
+from ...core.theme import SURFACE_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
 
 class HomeView(ttk.Frame):
@@ -23,7 +23,7 @@ class HomeView(ttk.Frame):
 
     def build_ui(self):
         ttk.Label(self, text=app_state.t("home_welcome"), style="Header.TLabel").pack(anchor="w")
-        ttk.Label(self, text=app_state.t("home_desc"), font=("Segoe UI", 12), foreground="gray").pack(anchor="w", pady=(5, 30))
+        ttk.Label(self, text=app_state.t("home_desc"), font=(MAIN_FONT, 12), foreground="gray").pack(anchor="w", pady=(5, 30))
         
         cards_frame = ttk.Frame(self)
         cards_frame.pack(fill="x", pady=20)
@@ -33,9 +33,9 @@ class HomeView(ttk.Frame):
         card1.pack(side="left", fill="both", expand=True, padx=(0, 10))
         c1_inner = ttk.Frame(card1, padding=30, style="Card.TFrame")
         c1_inner.pack(fill="both", expand=True)
-        ttk.Label(c1_inner, text="📂", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
-        ttk.Label(c1_inner, text=app_state.t("card_new_task"), font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Label(c1_inner, text=app_state.t("card_new_desc"), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+        ttk.Label(c1_inner, text="📂", font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
+        ttk.Label(c1_inner, text=app_state.t("card_new_task"), font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR).pack()
+        ttk.Label(c1_inner, text=app_state.t("card_new_desc"), font=(MAIN_FONT, 10), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
         ttk.Button(c1_inner, text=app_state.t("btn_select_computer"), style="Accent.TButton", command=self.controller.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
         
         # Batch Card
@@ -43,9 +43,9 @@ class HomeView(ttk.Frame):
         card2.pack(side="left", fill="both", expand=True, padx=(10, 0))
         c2_inner = ttk.Frame(card2, padding=30, style="Card.TFrame")
         c2_inner.pack(fill="both", expand=True)
-        ttk.Label(c2_inner, text="📦", font=("Segoe UI", 32), background=SURFACE_COLOR).pack(pady=(0,10))
-        ttk.Label(c2_inner, text=app_state.t("batch_title"), font=("Segoe UI", 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Label(c2_inner, text="Process multiple PDFs at once", foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+        ttk.Label(c2_inner, text="📦", font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
+        ttk.Label(c2_inner, text=app_state.t("batch_title"), font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR).pack()
+        ttk.Label(c2_inner, text="Process multiple PDFs at once", font=(MAIN_FONT, 10), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
         
         def open_batch_diag():
             self.controller.switch_tab("batch")
@@ -54,7 +54,7 @@ class HomeView(ttk.Frame):
         ttk.Button(c2_inner, text=app_state.t("btn_open_batch"), style="Accent.TButton", command=open_batch_diag).pack(pady=20, ipadx=10, ipady=5)
 
         # Recent Documents (Cards)
-        ttk.Label(self, text=app_state.t("home_recent"), font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(40, 10))
+        ttk.Label(self, text=app_state.t("home_recent"), font=(MAIN_FONT, 16, "bold")).pack(anchor="w", pady=(40, 10))
         
         self.recent_container = ttk.Frame(self)
         self.recent_container.pack(fill="both", expand=True)
@@ -87,10 +87,10 @@ class HomeView(ttk.Frame):
         info_frame = ttk.Frame(row, style="Card.TFrame")
         info_frame.pack(side="left", fill="x", expand=True)
         
-        ttk.Label(info_frame, text=fname, font=("Segoe UI", 10, "bold"), background=SURFACE_COLOR).pack(anchor="w")
+        ttk.Label(info_frame, text=fname, font=(MAIN_FONT, 10, "bold"), background=SURFACE_COLOR).pack(anchor="w")
         
         meta_txt = f"{date_str} • {status}"
-        lbl_meta = ttk.Label(info_frame, text=meta_txt, font=("Segoe UI", 9), background=SURFACE_COLOR, foreground="gray")
+        lbl_meta = ttk.Label(info_frame, text=meta_txt, font=(MAIN_FONT, 9), background=SURFACE_COLOR, foreground="gray")
         lbl_meta.pack(anchor="w")
         
         # Actions
@@ -104,7 +104,7 @@ class HomeView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Source file not found.")
 
-        btn_src = tk.Button(actions, text="📄 Src", font=("Segoe UI", 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
+        btn_src = tk.Button(actions, text="📄 Src", font=(MAIN_FONT, 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
         btn_src.pack(side="left", padx=2)
         if not source: btn_src.config(state="disabled", bg="#2a2a2a", fg="gray")
         
@@ -115,7 +115,7 @@ class HomeView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Output file not found.")
 
-        btn_out = tk.Button(actions, text="👁 View", font=("Segoe UI", 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
+        btn_out = tk.Button(actions, text="👁 View", font=(MAIN_FONT, 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
         btn_out.pack(side="left", padx=2)
         if not output: btn_out.config(state="disabled", bg="#2a2a2a", fg="gray", cursor="arrow")
 
@@ -127,5 +127,5 @@ class HomeView(ttk.Frame):
                 history.delete_entry(index)
                 self.refresh_recent_docs()
 
-        btn_del = tk.Button(actions, text="🗑", font=("Segoe UI", 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
+        btn_del = tk.Button(actions, text="🗑", font=(MAIN_FONT, 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
         btn_del.pack(side="left", padx=2)

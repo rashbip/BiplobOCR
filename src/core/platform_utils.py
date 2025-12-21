@@ -97,10 +97,60 @@ def setup_tesseract_environment():
     except Exception as e:
         logging.error(f"Failed to setup local Tesseract: {e}")
 
+def setup_ghostscript_environment():
+    """Configure environment to use bundled Ghostscript if available."""
+    try:
+        if not IS_WINDOWS:
+            # We will handle Linux/others later as requested
+            return
+
+        base_dir = get_base_dir()
+        gs_bin = os.path.join(base_dir, "ghostscript", "windows", "bin")
+        gs_lib = os.path.join(base_dir, "ghostscript", "windows", "lib")
+        
+        if not os.path.exists(gs_bin):
+            logging.warning(f"Bundled Ghostscript not found at: {gs_bin}. Utilizing system PATH.")
+            return
+
+        # Prepend to PATH - ocrmypdf looks for gswin64c.exe or gs.exe
+        if gs_bin not in os.environ["PATH"]:
+            os.environ["PATH"] = gs_bin + os.pathsep + os.environ["PATH"]
+        
+        # Ghostscript often needs the lib directory in GS_LIB environment variable
+        if os.path.exists(gs_lib):
+            os.environ["GS_LIB"] = gs_lib
+            logging.info(f"Set GS_LIB: {gs_lib}")
+
+        logging.info(f"Using bundled Ghostscript from: {gs_bin}")
+        
+    except Exception as e:
+        logging.error(f"Failed to setup local Ghostscript: {e}")
+
 def get_tessdata_dir():
     """Returns the path to the tessdata directory."""
     base_dir = get_base_dir()
     return os.path.join(base_dir, "tesseract", get_tesseract_dir_name(), "tessdata")
+
+def setup_fonts():
+    """Register custom fonts from assets folder."""
+    if not IS_WINDOWS:
+        return
+
+    try:
+        import ctypes
+        base_dir = get_base_dir()
+        font_path = os.path.join(base_dir, "assets", "AdorNoirrit.ttf")
+        
+        if os.path.exists(font_path):
+            # FR_PRIVATE = 0x10. The font is only available to the process that loaded it.
+            # FR_NOT_ENUM = 0x20. The font is not enumerated by GetFontFamily or similar.
+            res = ctypes.windll.gdi32.AddFontResourceExW(font_path, 0x10, 0)
+            if res:
+                logging.info(f"Successfully loaded custom font: {font_path}")
+            else:
+                logging.warning(f"Failed to load font with AddFontResourceExW: {font_path}")
+    except Exception as e:
+        logging.error(f"Error loading custom fonts: {e}")
 
 def kill_process_tree(pid):
     """Terminates a process and its children in a platform-independent way."""

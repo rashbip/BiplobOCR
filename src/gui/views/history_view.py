@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import os
 from ...core.history_manager import history
-from ...core.theme import SURFACE_COLOR, BG_COLOR, THEME_COLOR, FG_COLOR
+from ...core.theme import SURFACE_COLOR, BG_COLOR, THEME_COLOR, FG_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
 
 class HistoryView(ttk.Frame):
@@ -94,7 +94,7 @@ class HistoryView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Source file not found (Moved/Deleted).")
 
-        btn_src = tk.Button(actions, text="📄 Src", font=("Segoe UI", 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
+        btn_src = tk.Button(actions, text="📄 Src", font=(MAIN_FONT, 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
         btn_src.pack(side="left", padx=2)
         if not source: btn_src.config(state="disabled", bg="#2a2a2a", fg="gray")
         
@@ -105,7 +105,7 @@ class HistoryView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Output file not found (Moved/Deleted).")
 
-        btn_out = tk.Button(actions, text="👁 View", font=("Segoe UI", 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
+        btn_out = tk.Button(actions, text="👁 View", font=(MAIN_FONT, 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
         btn_out.pack(side="left", padx=2)
         
         if not output:
@@ -118,24 +118,24 @@ class HistoryView(ttk.Frame):
                 self.refresh()
                 self.controller.view_home.refresh_recent_docs()
 
-        btn_del = tk.Button(actions, text="🗑", font=("Segoe UI", 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
+        btn_del = tk.Button(actions, text="🗑", font=(MAIN_FONT, 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
         btn_del.pack(side="left", padx=2)
         
         # Status (Before Actions)
-        lbl_status = ttk.Label(row, text=status, width=15, font=("Segoe UI", 9, "bold"), background=SURFACE_COLOR)
+        lbl_status = ttk.Label(row, text=status, width=15, font=(MAIN_FONT, 9, "bold"), background=SURFACE_COLOR)
         if "Success" in status or "Completed" in status: lbl_status.config(foreground="#4CAF50")
         elif "Fail" in status: lbl_status.config(foreground="#F44336")
         else: lbl_status.config(foreground="orange")
         lbl_status.pack(side="right", padx=10)
         
         # Date (Before Status)
-        lbl_date = ttk.Label(row, text=date_str, width=20, font=("Segoe UI", 9), foreground="gray", background=SURFACE_COLOR)
+        lbl_date = ttk.Label(row, text=date_str, width=20, font=(MAIN_FONT, 9), foreground="gray", background=SURFACE_COLOR)
         lbl_date.pack(side="right", padx=10)
         
         # Name (Left, Expand)
         # Dynamic truncation could be hard with pure Label, but let's try just letting it cut off or wrap
         # But user wants responsive. 
-        lbl_name = ttk.Label(row, text=fname, font=("Segoe UI", 10), background=SURFACE_COLOR)
+        lbl_name = ttk.Label(row, text=fname, font=(MAIN_FONT, 10), background=SURFACE_COLOR)
         lbl_name.pack(side="left", fill="x", expand=True, padx=10)
 
     def confirm_clear_all(self):

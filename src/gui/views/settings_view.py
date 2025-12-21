@@ -7,7 +7,7 @@ from tkinter import ttk, filedialog, messagebox
 import os
 import shutil
 
-from ...core.theme import BG_COLOR, SURFACE_COLOR, FG_COLOR, THEME_COLOR
+from ...core.theme import BG_COLOR, SURFACE_COLOR, FG_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
 from ...core.ocr_engine import get_available_languages, get_tessdata_dir
 
@@ -47,7 +47,7 @@ class SettingsView(ttk.Frame):
 
         # Build UI into settings_scroll_frame
         lbl = ttk.Label(self.settings_scroll_frame, text=app_state.t("settings_title"), 
-                        font=("Segoe UI", 20, "bold"))
+                        font=(HEADER_FONT, 20, "bold"))
         lbl.pack(anchor="w", pady=(0, 20))
         
         # Hardware Config
@@ -68,7 +68,7 @@ class SettingsView(ttk.Frame):
         ttk.Label(f_hw, text=f"{app_state.t('lbl_threads')} (Total Cores: {self.controller.cpu_count})").pack(
             anchor="w", pady=(10, 0))
         ttk.Label(f_hw, text="Lower this value if your PC freezes.", 
-                  foreground="gray", font=("Segoe UI", 8)).pack(anchor="w")
+                  foreground="gray", font=(MAIN_FONT, 8)).pack(anchor="w")
         
         # Scale for threads
         self.s_threads = tk.Scale(f_hw, from_=1, to=self.controller.cpu_count, orient="horizontal", 
@@ -98,7 +98,7 @@ class SettingsView(ttk.Frame):
         
         # Data Packs Management
         ttk.Label(f_lang, text="Installed Data Packs", 
-                  font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(15, 5))
+                  font=(MAIN_FONT, 9, "bold")).pack(anchor="w", pady=(15, 5))
         
         # Scrollable Container for Packs
         pack_container = ttk.Frame(f_lang, style="Card.TFrame", padding=2)
@@ -207,14 +207,14 @@ class SettingsView(ttk.Frame):
             
             # Icon/Name
             icon = "🔴" if is_disabled else "🟢"
-            lbl = ttk.Label(row, text=f"{icon} {clean_name}", font=("Segoe UI", 9))
+            lbl = ttk.Label(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 9))
             if is_disabled:
                 lbl.config(foreground="gray")
             lbl.pack(side="left", padx=5)
             
             # Actions - Protect OSD
             if clean_name == "osd.traineddata":
-                ttk.Label(row, text="(System)", font=("Segoe UI", 8), 
+                ttk.Label(row, text="(System)", font=(MAIN_FONT, 8), 
                           foreground="gray").pack(side="right", padx=10)
                 continue
             
