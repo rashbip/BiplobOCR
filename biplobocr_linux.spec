@@ -11,6 +11,9 @@ added_files = [
     ('src/assets', 'src/assets'),
     ('src/tesseract/linux', 'src/tesseract/linux'),
     ('src/ghostscript/linux', 'src/ghostscript/linux'),
+    # Tcl/Tk libraries (essential for Linux file dialogs in bundle)
+    ('/usr/share/tcltk/tcl8.6', 'tcl'),
+    ('/usr/share/tcltk/tk8.6', 'tk'),
     # Only include the specific python source folders needed, EXCLUDING the venv
     ('src/core', 'src/core'),
     ('src/gui', 'src/gui'),
@@ -25,6 +28,9 @@ a = Analysis(
     datas=added_files,
     hiddenimports=[
         'tkinterdnd2',
+        'PIL',
+        'PIL.Image',
+        'PIL.ImageTk',
         'PIL._tkinter_resanitize',
         'ocrmypdf',
         'pikepdf',
@@ -36,6 +42,7 @@ a = Analysis(
         'reportlab.graphics.barcode.code128',
         'reportlab.graphics.barcode.code39',
         'reportlab.graphics.barcode.usps',
+        'reportlab.graphics.barcode.qr',
     ],
     hookspath=[],
     hooksconfig={},

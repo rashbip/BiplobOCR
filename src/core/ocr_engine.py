@@ -210,8 +210,15 @@ def run_ocr(input_path, output_path, password=None, force=False, options=None, p
                 force, options, progress_callback, log_callback
             )
         else:
-            # --- STANDARD SINGLE FILE PROCESS ---
-            return _run_ocr_single(working_input, output_path, force, options, progress_callback, log_callback)
+            # --- CHOOSE STRATEGY ---
+            do_rasterize = options.get("rasterize", False) if options else False
+            
+            if do_rasterize:
+                # --- STANDARD OCR (Destructive/Fixing) ---
+                return _run_ocr_single(working_input, output_path, force, options, progress_callback, log_callback)
+            else:
+                # --- LAYER INJECTION (Non-destructive) ---
+                return _run_ocr_layer_injection(working_input, output_path, options, progress_callback, log_callback)
             
     except OCRError as e:
         raise e
@@ -293,6 +300,111 @@ def _run_ocr_chunked(input_path, output_path, total_pages, chunk_size, force, op
     finally:
         # Cleanup chunks directory
         try: shutil.rmtree(chunks_dir)
+        except: pass
+
+def _run_ocr_layer_injection(input_path, output_path, options, progress_callback, log_callback):
+    """
+    Non-destructive OCR: Performs OCR on page images and injects the text layer 
+    back into the original PDF pages, preserving all original vectors and annotations.
+    """
+    temp_dir = tempfile.mkdtemp(prefix="biplob_injection_")
+    try:
+        if log_callback: log_callback("Strategizing: Using Non-Destructive Layer Injection...")
+        
+        doc = fitz.open(input_path)
+        total_pages = len(doc)
+        
+        # 1. Prepare Images for Tesseract
+        custom_dpi = options.get("dpi", 0) if options else 0
+        img_list_path = os.path.join(temp_dir, "images.txt")
+        with open(img_list_path, "w", encoding="utf-8") as f_list:
+            for i in range(total_pages):
+                if CANCEL_FLAG: raise OCRError("Process Cancelled")
+                
+                page = doc[i]
+                page_dpi = custom_dpi if custom_dpi > 0 else _get_page_max_dpi(page)
+                
+                img_path = os.path.join(temp_dir, f"page_{i}.png")
+                pix = page.get_pixmap(dpi=page_dpi)
+                pix.save(img_path)
+                f_list.write(img_path + "\n")
+                
+                if progress_callback: progress_callback(int((i + 1) / total_pages * 20)) # First 20% for rendering
+
+        # 2. Run Tesseract to get transparent PDF text layer
+        if log_callback: log_callback("Tesseract is analyzing pages...")
+        tess_out_base = os.path.join(temp_dir, "ocr_layer")
+        
+        # Find Tesseract
+        base_dir = platform_utils.get_base_dir()
+        tess_exe = os.path.join(base_dir, "tesseract", platform_utils.get_tesseract_dir_name(), platform_utils.get_tesseract_executable_name())
+        
+        lang = options.get("language", "eng")
+        cmd = [
+            tess_exe,
+            img_list_path,
+            tess_out_base,
+            "-l", lang,
+            "-c", "textonly_pdf=1",
+            "pdf"
+        ]
+        
+        env = os.environ.copy()
+        env["TESSDATA_PREFIX"] = get_tessdata_dir()
+        
+        # Using a special helper to track progress of a raw tesseract call is hard, 
+        # so we just show it's active.
+        _run_cmd(cmd, env, log_callback=log_callback)
+        
+        ocr_layer_pdf = tess_out_base + ".pdf"
+        if not os.path.exists(ocr_layer_pdf):
+            raise OCRError("Tesseract failed to generate OCR layer.")
+            
+        # 3. Inject Layer into Original PDF
+        if log_callback: log_callback("Grafting OCR layer onto original PDF...")
+        layer_doc = fitz.open(ocr_layer_pdf)
+        
+        # Check if page counts match
+        if len(layer_doc) != total_pages:
+            logging.warning(f"Page count mismatch: Original {total_pages}, OCR {len(layer_doc)}")
+            
+        for i in range(min(total_pages, len(layer_doc))):
+            if CANCEL_FLAG: raise OCRError("Process Cancelled")
+            
+            orig_page = doc[i]
+            layer_page = layer_doc[i]
+            
+            # Use show_pdf_page to overlay the transparent text layer
+            # Overlay=True puts it on top (standard for searching)
+            orig_page.show_pdf_page(orig_page.rect, layer_doc, i, overlay=True)
+            
+            if progress_callback: 
+                progress_callback(int(20 + (i + 1) / total_pages * 70)) # Next 70% for injection
+
+        # 4. Save Final PDF
+        if log_callback: log_callback("Finalizing document...")
+        doc.save(output_path, deflate=True) # preserve original as much as possible
+        
+        # 5. Generate Sidecar
+        sidecar_file = output_path.replace(".pdf", ".txt")
+        full_text = ""
+        for i in range(len(layer_doc)):
+            full_text += layer_doc[i].get_text() + "\n"
+        with open(sidecar_file, "w", encoding="utf-8") as f:
+            f.write(full_text)
+            
+        doc.close()
+        layer_doc.close()
+        
+        if progress_callback: progress_callback(100)
+        return sidecar_file
+
+    except Exception as e:
+        if "Process Cancelled" in str(e): raise OCRError("Process Cancelled")
+        logging.error(f"Layer Injection Error: {e}")
+        raise OCRError(f"Layer Injection Strategy Failed: {str(e)}")
+    finally:
+        try: shutil.rmtree(temp_dir)
         except: pass
 
 def _run_cmd(cmd, env, progress_callback=None, log_callback=None):
@@ -378,7 +490,8 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
     
     # 1. Prepare Base CMD - Use Python module execution for reliability
     # This ensures ocrmypdf works even if Scripts folder isn't in PATH
-    base_cmd = [sys.executable, "-m", "ocrmypdf"]
+    from .platform_utils import get_python_executable
+    base_cmd = [get_python_executable(), "-m", "ocrmypdf"]
     if force: base_cmd.append("--force-ocr")
     else: base_cmd.append("--skip-text")
 
@@ -389,8 +502,6 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
         if options.get("deskew"): base_cmd.append("--deskew")
         if options.get("clean"): base_cmd.append("--clean")
         if options.get("rotate"): base_cmd.append("--rotate-pages")
-        if options.get("optimize", "0") != "0": 
-            base_cmd.extend(["--optimize", options.get("optimize")])
         
         lang = options.get("language", "eng")
         base_cmd.extend(["-l", lang])
@@ -413,6 +524,37 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
     tess_cfg_path = None
     use_gpu = options.get("use_gpu") if options else False
     
+    # Option: Rasterize Images
+    do_rasterize = options.get("rasterize", False) if options else False
+    custom_dpi = options.get("dpi", 0) if options else 0 # 0 means Auto/Same as Source
+
+    # --- ADVANCED OCR OPTIONS ---
+    # 1. Optimization Control
+    opt_val = options.get("optimize", "0") if options else "0"
+    base_cmd.extend(["--optimize", opt_val])
+
+    # 2. Use 'auto' renderer (safer choice)
+    base_cmd.extend(["--pdf-renderer", "auto"])
+
+    # 3. Handle DPI (only if explicitly set)
+    if custom_dpi > 0:
+        base_cmd.extend(["--image-dpi", str(custom_dpi)])
+
+    current_working_path = input_path
+
+    if do_rasterize:
+        dpi_str = f"at {custom_dpi} DPI" if custom_dpi > 0 else "using Source DPI"
+        if log_callback: log_callback(f"Manually rasterizing PDF {dpi_str} to flatten annotations/fix errors...")
+        temp_raster = input_path.replace(".pdf", "_pre_raster.pdf")
+        if _sanitize_pdf(input_path, temp_raster, dpi=custom_dpi):
+            current_working_path = temp_raster
+        else:
+            if log_callback: log_callback("Pre-rasterization failed. Proceeding with original.")
+    else:
+        # If not manually rasterizing, remind user that some options still cause ocrmypdf to rasterize
+        if options and (options.get("rotate") or options.get("clean") or options.get("deskew") or force):
+            if log_callback: log_callback("Note: Auto-Rotate/Clean/Deskew/Force-OCR will cause ocrmypdf to internaly rasterize pages.")
+
     # Internal execution helper with retry logic
     def attempt_execution(is_gpu):
         nonlocal tess_cfg_path
@@ -430,7 +572,7 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
             except: 
                 pass # Proceed without config if write fails
         
-        cmd.extend([input_path, output_path])
+        cmd.extend([current_working_path, output_path])
         
         try:
             _run_cmd(cmd, env, progress_callback, log_callback) # Pass log_callback here
@@ -460,12 +602,19 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
         else:
             last_error = e
             
-        # 2. CPU Failed? -> Try Sanitizing
-        if log_callback: log_callback("Standard OCR failed. Attempting sanitize...")
+        # 2. CPU Failed? -> Try Sanitizing (only if allowed)
+        if not do_rasterize:
+            err_text = last_error.stderr if last_error.stderr else str(last_error)
+            raise OCRError(f"OCR Failed: {err_text[-500:]}\n\nTip: Try enabling 'Rasterize Images' to fix PDF structure errors.")
+
+        if log_callback: 
+            dpi_msg = f"{custom_dpi} DPI" if custom_dpi > 0 else "Source DPI"
+            log_callback(f"Standard OCR failed. Attempting sanitize ({dpi_msg})...")
+        
         logging.warning("Standard OCR failed. Attempting to sanitize PDF (Rasterize & Rebuild)...")
         sanitized_path = input_path.replace(".pdf", "_clean.pdf")
         
-        if _sanitize_pdf(input_path, sanitized_path):
+        if _sanitize_pdf(input_path, sanitized_path, dpi=custom_dpi):
             try:
                 cmd = list(base_cmd)
                 cmd.extend([sanitized_path, output_path])
@@ -481,22 +630,56 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
         else:
             err_text = last_error.stderr if last_error.stderr else str(last_error)
             raise OCRError(f"OCR Failed: {err_text[-500:]}")
+    finally:
+        # Cleanup proactive rasterization temp file if it was created
+        if do_rasterize and current_working_path != input_path and os.path.exists(current_working_path):
+            try: os.remove(current_working_path)
+            except: pass
 
     return sidecar_file
 
-def _sanitize_pdf(input_path, output_path):
+def _get_page_max_dpi(page):
+    """Detect the maximum DPI of images on a page. Fallback to 300 if no images."""
+    try:
+        images = page.get_images()
+        if not images:
+            return 300
+        
+        max_seen_dpi = 72 # Default PDF resolution
+        for img in images:
+            xref = img[0]
+            pix_width = img[2] # actual pixels
+            rects = page.get_image_rects(xref)
+            if rects:
+                disp_width = rects[0].width # in points
+                if disp_width > 0:
+                    calculated_dpi = (pix_width / disp_width) * 72
+                    max_seen_dpi = max(max_seen_dpi, calculated_dpi)
+        
+        # Clamp to reasonable OCR limits
+        if max_seen_dpi < 200: return 200
+        if max_seen_dpi > 600: return 600
+        return int(max_seen_dpi)
+    except:
+        return 300
+
+def _sanitize_pdf(input_path, output_path, dpi=0):
     """
     Rebuilds a PDF by converting pages to images and back.
     Fixes corrupt streams/JPEGs that crash OCRmyPDF.
     """
     if not fitz: return False
+    
     try:
         doc = fitz.open(input_path)
         new_doc = fitz.open()
         
         for i, page in enumerate(doc):
-            # Render page to image (300 DPI for good OCR quality)
-            pix = page.get_pixmap(dpi=300)
+            # Deterministic/Source DPI if 0
+            page_dpi = dpi if dpi > 0 else _get_page_max_dpi(page)
+            
+            # Render page to image
+            pix = page.get_pixmap(dpi=page_dpi)
             img_bytes = pix.tobytes("jpg", jpg_quality=95)
             
             # Create new page in new doc

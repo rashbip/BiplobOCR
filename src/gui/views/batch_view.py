@@ -37,6 +37,13 @@ class BatchView(ttk.Frame):
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_clean"), variable=self.controller.var_clean).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_rotate"), variable=self.controller.var_rotate).pack(anchor="w", pady=2)
         ttk.Checkbutton(opt_frame, text=app_state.t("opt_force"), variable=self.controller.var_force).pack(anchor="w", pady=2)
+        ttk.Checkbutton(opt_frame, text=app_state.t("opt_rasterize"), variable=self.controller.var_rasterize).pack(anchor="w", pady=2)
+        
+        dpi_frame = ttk.Frame(opt_frame)
+        dpi_frame.pack(fill="x", pady=5)
+        ttk.Label(dpi_frame, text=app_state.t("lbl_dpi")).pack(side="left")
+        ttk.Entry(dpi_frame, textvariable=self.controller.var_dpi, width=8).pack(side="right")
+
         ttk.Label(opt_frame, text=app_state.t("lbl_optimize")).pack(anchor="w", pady=(10, 2))
         ttk.Combobox(opt_frame, textvariable=self.controller.var_optimize, values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
 

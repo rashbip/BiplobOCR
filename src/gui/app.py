@@ -80,6 +80,8 @@ class BiplobOCR(TkinterDnD.Tk):
         self.var_clean = tk.BooleanVar(value=app_state.get_option("clean"))
         self.var_rotate = tk.BooleanVar(value=app_state.get_option("rotate"))
         self.var_force = tk.BooleanVar(value=app_state.get_option("force"))
+        self.var_rasterize = tk.BooleanVar(value=app_state.get_option("rasterize"))
+        self.var_dpi = tk.IntVar(value=app_state.get_option("dpi") if app_state.get_option("dpi") is not None else 0)
         self.var_optimize = tk.StringVar(value=app_state.get_option("optimize"))
         self.var_gpu = tk.BooleanVar(value=app_state.get_option("use_gpu"))
         self.var_gpu_device = tk.StringVar(value=app_state.get_option("gpu_device") or "Auto")
@@ -366,16 +368,28 @@ class BiplobOCR(TkinterDnD.Tk):
         """Save current settings."""
         old_lang = app_state.get("language")
         new_lang = self.var_lang.get()
+        try:
+            dpi_val = int(self.var_dpi.get())
+        except:
+            dpi_val = 300
+
         new_conf = { 
             "language": new_lang, 
-            "ocr_language": self.var_ocr_lang.get() if hasattr(self, 'var_ocr_lang') else "eng",
+            "ocr_language": self.var_ocr_lang.get() if hasattr(self, 'var_ocr_lang') else (app_state.get("ocr_language") or "eng"),
             "theme": "dark", 
             "use_gpu": self.var_gpu.get(),
             "gpu_device": self.var_gpu_device.get(),
-            "max_cpu_threads": self.var_cpu_threads.get()
+            "max_cpu_threads": self.var_cpu_threads.get(),
+            "deskew": self.var_deskew.get(),
+            "clean": self.var_clean.get(),
+            "rotate": self.var_rotate.get(),
+            "force": self.var_force.get(),
+            "rasterize": self.var_rasterize.get(),
+            "dpi": dpi_val,
+            "optimize": self.var_optimize.get()
         }
         app_state.save_config(new_conf)
-        
+
         if old_lang != new_lang: 
             self.restart_application()
 

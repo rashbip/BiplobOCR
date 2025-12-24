@@ -86,6 +86,12 @@ class ProcessingController:
             
             ocr_lang = "+".join(selected_langs)
             
+            # Safe DPI parsing
+            try:
+                current_dpi = int(self.app.var_dpi.get())
+            except:
+                current_dpi = 300
+
             opts = {
                 "deskew": self.app.var_deskew.get(),
                 "clean": self.app.var_clean.get(),
@@ -94,6 +100,8 @@ class ProcessingController:
                 "use_gpu": self.app.var_gpu.get(),
                 "gpu_device": self.app.var_gpu_device.get(),
                 "max_cpu_threads": self.app.var_cpu_threads.get(),
+                "rasterize": self.app.var_rasterize.get(),
+                "dpi": current_dpi,
                 "language": ocr_lang
             }
             temp_out = os.path.join(TEMP_DIR, "processed_output.pdf")
@@ -247,6 +255,12 @@ class ProcessingController:
         ocr_lang = "+".join(selected_langs)
         print(f"OCR Lang string: {ocr_lang}")
 
+        # Safe DPI parsing
+        try:
+            current_dpi = int(self.app.var_dpi.get())
+        except:
+            current_dpi = 300
+
         opts = {
             "language": ocr_lang,
             "deskew": self.app.var_deskew.get(),
@@ -255,7 +269,9 @@ class ProcessingController:
             "optimize": self.app.var_optimize.get(),
             "use_gpu": self.app.var_gpu.get(),
             "gpu_device": self.app.var_gpu_device.get(),
-            "max_cpu_threads": self.app.var_cpu_threads.get()
+            "max_cpu_threads": self.app.var_cpu_threads.get(),
+            "rasterize": self.app.var_rasterize.get(),
+            "dpi": current_dpi
         }
         
         success_count = 0
@@ -308,7 +324,7 @@ class ProcessingController:
                 except: 
                     raise Exception("Password Required")
 
-                run_ocr(fpath, out_path, None, force=True, options=opts, 
+                run_ocr(fpath, out_path, None, force=self.app.var_force.get(), options=opts, 
                        progress_callback=batch_prog_cb, log_callback=log_cb)
                 
                 if self.stop_flag:

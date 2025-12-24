@@ -39,7 +39,20 @@ def bootstrap():
             print(f"CRITICAL ERROR: Failed to launch bundled Python: {e}")
             sys.exit(1)
 
+def setup_linux_bundle_env():
+    """Setup Tcl/Tk paths for Linux PyInstaller bundle."""
+    if sys.platform.startswith('linux') and hasattr(sys, '_MEIPASS'):
+        bundle_dir = sys._MEIPASS
+        tcl_dir = os.path.join(bundle_dir, 'tcl')
+        tk_dir = os.path.join(bundle_dir, 'tk')
+        
+        if os.path.exists(tcl_dir):
+            os.environ['TCL_LIBRARY'] = tcl_dir
+        if os.path.exists(tk_dir):
+            os.environ['TK_LIBRARY'] = tk_dir
+
 if __name__ == "__main__":
+    setup_linux_bundle_env()
     bootstrap()
     
     # Add the current directory to sys.path

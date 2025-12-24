@@ -12,12 +12,14 @@ DEFAULT_CONFIG = {
     "last_used_ocr_languages": [],
     "deskew": False,
     "clean": False,
-    "rotate": True,
+    "rotate": False,
     "force": False,
     "optimize": "0",
     "use_gpu": False,
     "gpu_device": "Auto",
-    "max_cpu_threads": 2
+    "max_cpu_threads": 2,
+    "rasterize": False,
+    "dpi": 0
 }
 
 TRANSLATIONS = {
@@ -34,6 +36,8 @@ TRANSLATIONS = {
         "opt_clean": "Clean Background (Remove Noise)",
         "opt_rotate": "Auto-Rotate Pages",
         "opt_force": "Force OCR (Ignore existing text)",
+        "opt_rasterize": "Rasterize Images (Fixes errors, flattens annotations)",
+        "lbl_dpi": "Rasterization DPI (0 = Auto/Original)",
         "lbl_optimize": "Optimization Level (0=None, 3=Max)",
         "lbl_lang": "Interface Language",
         "lbl_ocr_lang": "OCR Language (Data Pack)",
@@ -83,6 +87,8 @@ TRANSLATIONS = {
         "opt_clean": "ব্যাকগ্রাউন্ড পরিষ্কার করুন",
         "opt_rotate": "পেজ ঘোরান (Rotate)",
         "opt_force": "জোরপূর্বক OCR করুন",
+        "opt_rasterize": "ইমেজ রাস্টারাইজ করুন (ত্রুটি ঠিক করে)",
+        "lbl_dpi": "রাস্টারাইজেশন DPI (0 = অটো/আসল)",
         "lbl_optimize": "অপ্টিমাইজেশন (0=নাই, 3=সর্বোচ্চ)",
         "lbl_optimize": "অপ্টিমাইজেশন (0=নাই, 3=সর্বোচ্চ)",
         "lbl_lang": "ইন্টারফেস ভাষা (Interface)",
