@@ -363,14 +363,15 @@ class ProcessingController:
                 success_count += 1
                 
             except Exception as e:
-                status = "❌ Failed"
+                from ...core import platform_utils
+                status = platform_utils.sanitize_for_linux("❌ Failed")
                 err_msg = str(e)
                 if "Process Cancelled" in err_msg or self.stop_flag:
-                    status = "⛔ Cancelled"
-                    self.app.after(0, lambda id=item_id: self.app.batch_tree.set(id, "Status", status))
+                    status = platform_utils.sanitize_for_linux("⛔ Cancelled")
+                    self.app.after(0, lambda id=item_id, s=status: self.app.batch_tree.set(id, "Status", s))
                     history.add_entry(fname, "Batch Cancelled", source_path=fpath)
                     break
-                self.app.after(0, lambda id=item_id: self.app.batch_tree.set(id, "Status", status))
+                self.app.after(0, lambda id=item_id, s=status: self.app.batch_tree.set(id, "Status", s))
                 history.add_entry(fname, "Batch Failed", source_path=fpath)
             
             self.app.after(0, lambda v=(i+1)*100: self.app.global_progress.configure(value=v))
