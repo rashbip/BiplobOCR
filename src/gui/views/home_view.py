@@ -5,6 +5,7 @@ import os
 from ...core.history_manager import history
 from ...core.theme import SURFACE_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
+from ...core import platform_utils
 
 class HomeView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -33,7 +34,7 @@ class HomeView(ttk.Frame):
         card1.pack(side="left", fill="both", expand=True, padx=(0, 10))
         c1_inner = ttk.Frame(card1, padding=30, style="Card.TFrame")
         c1_inner.pack(fill="both", expand=True)
-        ttk.Label(c1_inner, text="📂", font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
+        ttk.Label(c1_inner, text=platform_utils.sanitize_for_linux("📂"), font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
         ttk.Label(c1_inner, text=app_state.t("card_new_task"), font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR).pack()
         ttk.Label(c1_inner, text=app_state.t("card_new_desc"), font=(MAIN_FONT, 10), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
         ttk.Button(c1_inner, text=app_state.t("btn_select_computer"), style="Accent.TButton", command=self.controller.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
@@ -43,7 +44,7 @@ class HomeView(ttk.Frame):
         card2.pack(side="left", fill="both", expand=True, padx=(10, 0))
         c2_inner = ttk.Frame(card2, padding=30, style="Card.TFrame")
         c2_inner.pack(fill="both", expand=True)
-        ttk.Label(c2_inner, text="📦", font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
+        ttk.Label(c2_inner, text=platform_utils.sanitize_for_linux("📦"), font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
         ttk.Label(c2_inner, text=app_state.t("batch_title"), font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR).pack()
         ttk.Label(c2_inner, text="Process multiple PDFs at once", font=(MAIN_FONT, 10), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
         
@@ -104,7 +105,7 @@ class HomeView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Source file not found.")
 
-        btn_src = tk.Button(actions, text="📄 Src", font=(MAIN_FONT, 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
+        btn_src = tk.Button(actions, text=platform_utils.sanitize_for_linux("📄 Src"), font=(MAIN_FONT, 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
         btn_src.pack(side="left", padx=2)
         if not source: btn_src.config(state="disabled", bg="#2a2a2a", fg="gray")
         
@@ -115,7 +116,7 @@ class HomeView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Output file not found.")
 
-        btn_out = tk.Button(actions, text="👁 View", font=(MAIN_FONT, 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
+        btn_out = tk.Button(actions, text=platform_utils.sanitize_for_linux("👁 View"), font=(MAIN_FONT, 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
         btn_out.pack(side="left", padx=2)
         if not output: btn_out.config(state="disabled", bg="#2a2a2a", fg="gray", cursor="arrow")
 
@@ -127,5 +128,5 @@ class HomeView(ttk.Frame):
                 history.delete_entry(index)
                 self.refresh_recent_docs()
 
-        btn_del = tk.Button(actions, text="🗑", font=(MAIN_FONT, 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
+        btn_del = tk.Button(actions, text=platform_utils.sanitize_for_linux("🗑"), font=(MAIN_FONT, 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
         btn_del.pack(side="left", padx=2)

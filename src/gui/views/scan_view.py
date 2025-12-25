@@ -8,6 +8,8 @@ from tkinter import ttk
 from ...core.theme import SURFACE_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
 from ...core.ocr_engine import get_available_languages
+from ...core import platform_utils
+
 from ..pdf_viewer import PDFViewer
 
 
@@ -30,7 +32,7 @@ class ScanView(ttk.Frame):
         
         ttk.Label(self.scan_sidebar, text="Active Task", font=(HEADER_FONT, 14, "bold"), 
                   foreground=THEME_COLOR).pack(anchor="w", pady=(0, 20))
-        ttk.Button(self.scan_sidebar, text="📂 Open New PDF", 
+        ttk.Button(self.scan_sidebar, text=platform_utils.sanitize_for_linux("📂 Open New PDF"), 
                    command=self.controller.open_pdf).pack(fill="x", pady=2)
         
         # Options
@@ -90,6 +92,8 @@ class ScanView(ttk.Frame):
         self.controller.viewer.pack(fill="both", expand=True)
         
         self.controller.success_frame = ttk.Frame(self.viewer_container, style="Card.TFrame", padding=20)
+
+
 
     def _build_language_checkboxes(self):
         """Build or rebuild the language checkboxes."""

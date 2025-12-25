@@ -9,10 +9,15 @@ from ...core.theme import THEME_COLOR, THEME_COLOR_HOVER, THEME_COLOR_ACTIVE, BG
 def setup_custom_theme(root):
     """Configure all TTK styles for the dark theme."""
     style = ttk.Style(root)
-    try:
-        style.theme_use("clam")
-    except:
+    import sys
+    if sys.platform.startswith('linux'):
         style.theme_use("default")
+    else:
+        try:
+            style.theme_use("clam")
+        except:
+            style.theme_use("default")
+
 
     # Global Colors
     root.option_add("*background", BG_COLOR)

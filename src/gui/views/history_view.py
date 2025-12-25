@@ -4,6 +4,7 @@ import os
 from ...core.history_manager import history
 from ...core.theme import SURFACE_COLOR, BG_COLOR, THEME_COLOR, FG_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
+from ...core import platform_utils
 
 class HistoryView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -94,7 +95,7 @@ class HistoryView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Source file not found (Moved/Deleted).")
 
-        btn_src = tk.Button(actions, text="📄 Src", font=(MAIN_FONT, 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
+        btn_src = tk.Button(actions, text=platform_utils.sanitize_for_linux("📄 Src"), font=(MAIN_FONT, 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
         btn_src.pack(side="left", padx=2)
         if not source: btn_src.config(state="disabled", bg="#2a2a2a", fg="gray")
         
@@ -105,7 +106,7 @@ class HistoryView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Output file not found (Moved/Deleted).")
 
-        btn_out = tk.Button(actions, text="👁 View", font=(MAIN_FONT, 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
+        btn_out = tk.Button(actions, text=platform_utils.sanitize_for_linux("👁 View"), font=(MAIN_FONT, 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
         btn_out.pack(side="left", padx=2)
         
         if not output:
@@ -118,7 +119,7 @@ class HistoryView(ttk.Frame):
                 self.refresh()
                 self.controller.view_home.refresh_recent_docs()
 
-        btn_del = tk.Button(actions, text="🗑", font=(MAIN_FONT, 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
+        btn_del = tk.Button(actions, text=platform_utils.sanitize_for_linux("🗑"), font=(MAIN_FONT, 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
         btn_del.pack(side="left", padx=2)
         
         # Status (Before Actions)

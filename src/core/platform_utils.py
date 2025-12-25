@@ -61,8 +61,8 @@ def get_python_executable():
 
 def setup_python_environment():
     """Configure environment for bundled Python (like adding site-packages)."""
+    base_dir = get_base_dir()
     if IS_WINDOWS:
-        base_dir = get_base_dir()
         python_dir = os.path.join(base_dir, "python", "windows")
         site_packages = os.path.join(python_dir, "Lib", "site-packages")
         
@@ -82,6 +82,20 @@ def setup_python_environment():
                 sys.path.append(site_packages)
             os.environ["PYTHONPATH"] = site_packages + os.pathsep + os.environ.get("PYTHONPATH", "")
             logging.info(f"Added bundled site-packages to path: {site_packages}")
+    elif IS_LINUX:
+        # Linux site-packages support (bundled)
+        python_dir = os.path.join(base_dir, "python", "linux")
+        # Check standard venv path first, then literal site-packages
+        site_packages = os.path.join(python_dir, "venv", "lib", f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages")
+        if not os.path.exists(site_packages):
+            site_packages = os.path.join(python_dir, "site-packages")
+            
+        if os.path.exists(site_packages):
+            if site_packages not in sys.path:
+                sys.path.append(site_packages)
+            os.environ["PYTHONPATH"] = site_packages + os.pathsep + os.environ.get("PYTHONPATH", "")
+            logging.info(f"Added bundled Linux site-packages to path: {site_packages}")
+
 
 def setup_tesseract_environment():
     """Configure environment to use bundled Tesseract if available."""
@@ -95,22 +109,17 @@ def setup_tesseract_environment():
         tess_exe_name = get_tesseract_executable_name()
         tess_exe = os.path.join(tess_bin, tess_exe_name)
 
-        if not os.path.exists(tess_exe):
-            logging.warning(f"Bundled Tesseract not found at: {tess_exe}. Utilizing system PATH.")
-            # On Linux, we might purely rely on system PATH, so this is fine.
-            return
+        if os.path.exists(tess_exe):
+            # Prepend to PATH
+            os.environ["PATH"] = tess_bin + os.pathsep + os.environ["PATH"]
+            logging.info(f"Using bundled Tesseract: {tess_exe}")
+        else:
+            logging.warning(f"Bundled Tesseract NOT found at: {tess_exe}. Utilizing system PATH.")
 
-        # Prepend to PATH
-        os.environ["PATH"] = tess_bin + os.pathsep + os.environ["PATH"]
-        
-        # Set TESSDATA_PREFIX
-        # Only set if it exists or if we want to force it. 
-        # Usually good to force if we are using bundled tesseract.
+        # Set TESSDATA_PREFIX if bundled data exists
         if os.path.exists(tess_data):
             os.environ["TESSDATA_PREFIX"] = tess_data
             logging.info(f"Tessdata Prefix: {tess_data}")
-        
-        logging.info(f"Using bundled Tesseract: {tess_exe}")
         
     except Exception as e:
         logging.error(f"Failed to setup local Tesseract: {e}")
@@ -182,7 +191,7 @@ def setup_fonts():
             # Refresh font cache
             try:
                 subprocess.run(["fc-cache", "-f", local_fonts_dir], check=False, 
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 logging.info(f"Registered custom font for Linux: {target_font_path}")
                 return "Li Ador Noirrit"
             except:
@@ -192,6 +201,24 @@ def setup_fonts():
     except Exception as e:
         logging.error(f"Error loading custom fonts: {e}")
         return None
+
+def sanitize_for_linux(text):
+    """Removes or replaces emojis that cause X11 Render crashes on some Linux systems."""
+    if not IS_LINUX or not text:
+        return text
+    
+    # Comprehensive replacement for emojis used in the app that crash X11
+    emojis = [
+        "📜", "📂", "📦", "👁", "🗑", "✅", "🟥", "💾", "📄", 
+        "🏠", "🛠", "🕒", "⚙️", "➕", "▶", "🔒", "🔑", "🔍",
+        "🔴", "🟢", "⚠", "🖼"
+    ]
+    clean_text = str(text)
+    for e in emojis:
+        clean_text = clean_text.replace(e, "")
+    
+    return clean_text.strip()
+
 
 
 

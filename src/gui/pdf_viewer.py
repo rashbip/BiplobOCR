@@ -3,6 +3,9 @@ from tkinter import ttk, messagebox, Menu
 import fitz  # PyMuPDF
 from PIL import Image, ImageTk
 import math
+from ..core.theme import MAIN_FONT, HEADER_FONT
+from ..core import platform_utils
+
 
 class PDFViewer(ttk.Frame):
     def __init__(self, master, **kwargs):
@@ -29,7 +32,7 @@ class PDFViewer(ttk.Frame):
         self.toolbar.pack(side="top", fill="x")
 
         # Filename Label
-        self.lbl_filename = ttk.Label(self.toolbar, text="No File Open", font=("Segoe UI", 10, "bold"))
+        self.lbl_filename = ttk.Label(self.toolbar, text="No File Open", font=(MAIN_FONT, 10, "bold"))
         self.lbl_filename.pack(side="left", padx=(5, 20))
 
         # Navigation
@@ -55,7 +58,7 @@ class PDFViewer(ttk.Frame):
         
         # View Mode Switch (Icon-like)
         self.is_text_mode = False
-        self.btn_mode = ttk.Button(self.toolbar, text="👁 View Text", command=self.toggle_view_mode)
+        self.btn_mode = ttk.Button(self.toolbar, text=platform_utils.sanitize_for_linux("👁 View Text"), command=self.toggle_view_mode)
         self.btn_mode.pack(side="right", padx=10)
 
         # --- Main Container Stack ---
@@ -75,7 +78,7 @@ class PDFViewer(ttk.Frame):
 
         # 2. Text View (Raw Text)
         self.text_frame = ttk.Frame(self.container)
-        self.text_widget = tk.Text(self.text_frame, wrap="word", font=("Segoe UI", 11), padx=20, pady=20)
+        self.text_widget = tk.Text(self.text_frame, wrap="word", font=(MAIN_FONT, 11), padx=20, pady=20)
         self.text_scroll = ttk.Scrollbar(self.text_frame, orient="vertical", command=self.text_widget.yview)
         self.text_widget.config(yscrollcommand=self.text_scroll.set)
         
@@ -95,12 +98,12 @@ class PDFViewer(ttk.Frame):
         self.is_text_mode = not self.is_text_mode
         
         if self.is_text_mode:
-            self.btn_mode.config(text="🖼 View Image")
+            self.btn_mode.config(text=platform_utils.sanitize_for_linux("🖼 View Image"))
             self.canvas_frame.pack_forget()
             self.text_frame.pack(fill="both", expand=True)
             self.show_text_content()
         else:
-            self.btn_mode.config(text="👁 View Text")
+            self.btn_mode.config(text=platform_utils.sanitize_for_linux("👁 View Text"))
             self.text_frame.pack_forget()
             self.canvas_frame.pack(fill="both", expand=True)
             # Image is already there or needs refresh?

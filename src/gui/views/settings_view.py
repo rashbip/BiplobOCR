@@ -10,6 +10,8 @@ import shutil
 from ...core.theme import BG_COLOR, SURFACE_COLOR, FG_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
 from ...core.ocr_engine import get_available_languages, get_tessdata_dir
+from ...core import platform_utils
+
 
 
 class SettingsView(ttk.Frame):
@@ -119,7 +121,7 @@ class SettingsView(ttk.Frame):
         self.packs_canvas.bind('<Configure>', 
             lambda e: self.packs_canvas.itemconfig(self.packs_window, width=e.width))
 
-        btn_add_pack = ttk.Button(f_lang, text="➕ Add Data Pack", command=self.add_data_pack)
+        btn_add_pack = ttk.Button(f_lang, text=platform_utils.sanitize_for_linux("➕ Add Data Pack"), command=self.add_data_pack)
         btn_add_pack.pack(anchor="e", pady=5)
         
         self.refresh_data_packs_ui()
@@ -138,7 +140,7 @@ class SettingsView(ttk.Frame):
         
         ttk.Label(f_danger, text="Reset application to factory defaults. This cannot be undone.", 
                   foreground="#ff5555").pack(anchor="w")
-        ttk.Button(f_danger, text="⚠ Factory Reset", style="Danger.TButton", 
+        ttk.Button(f_danger, text=platform_utils.sanitize_for_linux("⚠ Factory Reset"), style="Danger.TButton", 
                    command=self.factory_reset).pack(anchor="w", pady=(10, 0))
 
     def factory_reset(self):
@@ -206,8 +208,9 @@ class SettingsView(ttk.Frame):
             row.pack(fill="x", pady=1)
             
             # Icon/Name
-            icon = "🔴" if is_disabled else "🟢"
+            icon = platform_utils.sanitize_for_linux("🔴") if is_disabled else platform_utils.sanitize_for_linux("🟢")
             lbl = ttk.Label(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 9))
+
             if is_disabled:
                 lbl.config(foreground="gray")
             lbl.pack(side="left", padx=5)
@@ -243,7 +246,7 @@ class SettingsView(ttk.Frame):
                             messagebox.showerror("Error", str(e))
                 return delete_pack
 
-            btn_del = ttk.Button(row, text="🗑", width=3, 
+            btn_del = ttk.Button(row, text=platform_utils.sanitize_for_linux("🗑"), width=3, 
                                   command=make_delete_handler(f), style="Danger.TButton")
             btn_del.pack(side="right", padx=2)
             

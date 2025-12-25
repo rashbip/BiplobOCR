@@ -5,26 +5,32 @@ import subprocess
 # 1. Enforcement Logic
 # BiplobOCR is designed to run using its bundled Windows Python.
 def bootstrap():
-    # Only enforce on Windows
-    if os.name == 'nt' and "BIPLO_OCR_BOOTSTRAPPED" not in os.environ:
+    # Only enforce on Windows/Linux if not already bootstrapped
+    if "BIPLO_OCR_BOOTSTRAPPED" not in os.environ:
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        python_dir = os.path.join(base_dir, "src", "python", "windows")
-        bundled_pyw = os.path.join(python_dir, "pythonw.exe")
-        bundled_py = os.path.join(python_dir, "python.exe")
         
-        # 1. Check if we are already running from the bundled folder
-        current_exe = os.path.abspath(sys.executable).lower()
-        bundle_path_abs = os.path.abspath(python_dir).lower()
-        
-        if current_exe.startswith(bundle_path_abs):
-            return # We are already in the right place!
-
-        # 2. Not in bundle? Re-launch using bundled pythonw.exe (Silent)
-        exe_to_use = bundled_pyw if os.path.exists(bundled_pyw) else bundled_py
+        if os.name == 'nt':
+            python_dir = os.path.join(base_dir, "src", "python", "windows")
+            bundled_pyw = os.path.join(python_dir, "pythonw.exe")
+            bundled_py = os.path.join(python_dir, "python.exe")
+            exe_to_use = bundled_pyw if os.path.exists(bundled_pyw) else bundled_py
+        else:
+            # Linux: Check for venv or bundled python
+            python_bin_dir = os.path.join(base_dir, "src", "python", "linux", "venv", "bin")
+            if not os.path.exists(python_bin_dir):
+                python_bin_dir = os.path.join(base_dir, "src", "python", "linux", "bin")
+            exe_to_use = os.path.join(python_bin_dir, "python")
         
         if not os.path.exists(exe_to_use):
-            print(f"CRITICAL ERROR: Bundled Python not found at {python_dir}")
-            sys.exit(1)
+            # If bundled not found, do not bootstrap, just continue with system
+            return 
+
+        # 1. Check if we are already running from the bundled folder
+        current_exe = os.path.abspath(sys.executable).lower()
+        bundle_exe_abs = os.path.abspath(exe_to_use).lower()
+        
+        if current_exe == bundle_exe_abs:
+            return # We are already in the right place!
 
         # Set a flag to prevent infinite loops
         env = os.environ.copy()
@@ -37,7 +43,9 @@ def bootstrap():
             sys.exit(0)
         except Exception as e:
             print(f"CRITICAL ERROR: Failed to launch bundled Python: {e}")
-            sys.exit(1)
+            # Fallback to system if bootstrap fails
+            return
+
 
 def setup_linux_bundle_env():
     """Setup Tcl/Tk paths for Linux PyInstaller bundle."""
@@ -69,16 +77,23 @@ if __name__ == "__main__":
     setup_python_environment()
     setup_tesseract_environment()
     setup_ghostscript_environment()
-    loaded_font = setup_fonts()
+    # loaded_font = setup_fonts()
+    loaded_font = None # Disable custom font to avoid X11 crash
 
     # If font failed to load, set fallbacks in the theme
     from src.core import theme
-    if not loaded_font:
+    if sys.platform.startswith('linux'):
+        # On Linux, avoid custom fonts or 'Segoe UI' which trigger X11 BadLength
+        # Use standard fonts that are likely to be found or handled gracefully
+        theme.MAIN_FONT = "DejaVu Sans"
+        theme.HEADER_FONT = "DejaVu Sans"
+    elif not loaded_font:
         theme.MAIN_FONT = "Segoe UI"
         theme.HEADER_FONT = "Segoe UI"
     else:
         theme.MAIN_FONT = loaded_font
         theme.HEADER_FONT = loaded_font
+
 
     from src.main import main
     main()

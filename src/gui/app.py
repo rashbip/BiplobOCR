@@ -4,18 +4,46 @@ Refactored for better maintainability. UI logic split into views and controllers
 """
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
-from tkinterdnd2 import TkinterDnD
 import shutil
 import os
 import sys
 import subprocess
 import webbrowser
 import pikepdf
+# from tkinterdnd2 import TkinterDnD
+import tkinter as tk
+
+# Mock TkinterDnD to fix Linux X11/TkinterDnD crash
+class MockTkinterDnD:
+    class Tk(tk.Tk):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+        def drop_target_register(self, *args): pass
+        def dnd_bind(self, *args): pass
+
+    # TkinterDnD usually adds these methods to all widgets via monkeypatching
+    # We'll just define them here so they don't crash when called on sub-widgets
+    @staticmethod
+    def install(root): pass
+
+if sys.platform.startswith('linux'):
+    TkinterDnD = MockTkinterDnD
+    # Monkeypatch tk.Widget to prevent crashes in Views
+    def drop_target_register(self, *args): pass
+    def dnd_bind(self, *args): pass
+    tk.Widget.drop_target_register = drop_target_register
+    tk.Widget.dnd_bind = dnd_bind
+else:
+    try:
+        from tkinterdnd2 import TkinterDnD
+    except ImportError:
+         TkinterDnD = MockTkinterDnD
 
 # Local imports
 from ..core.constants import APP_NAME
 from ..core.config_manager import state as app_state
 from ..core.history_manager import history
+from ..core import platform_utils
 from ..core.theme import THEME_COLOR, BG_COLOR, SURFACE_COLOR, MAIN_FONT, HEADER_FONT
 from ..core import gpu_manager
 
@@ -69,6 +97,7 @@ class BiplobOCR(TkinterDnD.Tk):
         # Build UI
         self._init_variables()
         self.build_ui()
+
         
         self.protocol("WM_DELETE_WINDOW", self.on_close_app)
         
@@ -104,6 +133,7 @@ class BiplobOCR(TkinterDnD.Tk):
 
         # 1. Sidebar (Left)
         self._build_sidebar()
+
         
         # Separator
         tk.Frame(self.main_container, bg="#333333", width=1).pack(side="left", fill="y")
@@ -117,9 +147,12 @@ class BiplobOCR(TkinterDnD.Tk):
         
         # Global Status Bar
         self._build_status_bar()
+
         
         # Initialize Views
         self._init_views()
+
+
 
     def _build_sidebar(self):
         """Build the sidebar navigation."""
@@ -130,7 +163,7 @@ class BiplobOCR(TkinterDnD.Tk):
         # Header
         self.sidebar_header = ttk.Frame(self.sidebar, padding=20)
         self.sidebar_header.pack(fill="x")
-        ttk.Label(self.sidebar_header, text="📜 BiplobOCR", style="Header.TLabel", 
+        ttk.Label(self.sidebar_header, text=platform_utils.sanitize_for_linux("BiplobOCR"), style="Header.TLabel", 
                   font=(HEADER_FONT, 18, "bold"), foreground=THEME_COLOR).pack(anchor="w")
         ttk.Label(self.sidebar_header, text="Version 3.3", font=(MAIN_FONT, 8), 
                   foreground="gray").pack(anchor="w")
@@ -157,7 +190,7 @@ class BiplobOCR(TkinterDnD.Tk):
         """Build the global status bar."""
         self.status_bar = ttk.Frame(self.right_panel, style="Card.TFrame", padding=10)
         
-        self.lbl_global_status = ttk.Label(self.status_bar, text="Processing...", 
+        self.lbl_global_status = ttk.Label(self.status_bar, text=platform_utils.sanitize_for_linux("Processing..."), 
                                             background=SURFACE_COLOR, font=(MAIN_FONT, 10, "bold"))
         self.lbl_global_status.pack(side="left", padx=10)
         
@@ -165,12 +198,12 @@ class BiplobOCR(TkinterDnD.Tk):
                                                 style="Horizontal.TProgressbar", length=300)
         self.global_progress.pack(side="left", fill="x", expand=True, padx=20)
         
-        self.btn_cancel_global = ttk.Button(self.status_bar, text="🟥 STOP", 
+        self.btn_cancel_global = ttk.Button(self.status_bar, text=platform_utils.sanitize_for_linux("STOP"), 
                                              command=self.processing_controller.cancel_processing, 
                                              style="Danger.TButton")
         self.btn_cancel_global.pack(side="right", padx=10)
         
-        self.btn_show_log = ttk.Button(self.status_bar, text="👁 See Process", 
+        self.btn_show_log = ttk.Button(self.status_bar, text=platform_utils.sanitize_for_linux("Show Log"), 
                                         command=self.open_log_view, style="TButton")
         self.btn_show_log.pack(side="right", padx=5)
 
@@ -179,11 +212,16 @@ class BiplobOCR(TkinterDnD.Tk):
         self.view_home = HomeView(self.content_area, self)
         self.view_batch = BatchView(self.content_area, self)
         self.view_history = HistoryView(self.content_area, self)
+
         self.view_scan = ScanView(self.content_area, self)
         self.view_settings = SettingsView(self.content_area, self)
 
+
         self.view_home.pack(fill="both", expand=True)
         self.switch_tab("home")
+
+
+
     
     def _create_nav_btn(self, text, tab, parent=None):
         """Create a navigation button."""
@@ -335,7 +373,7 @@ class BiplobOCR(TkinterDnD.Tk):
         
         c = ttk.Frame(self.success_frame, style="Card.TFrame")
         c.place(relx=0.5, rely=0.5, anchor="center")
-        ttk.Label(c, text="✅ " + app_state.t("msg_success"), font=(MAIN_FONT, 24), 
+        ttk.Label(c, text=app_state.t("msg_success"), font=(MAIN_FONT, 24), 
                   background=SURFACE_COLOR).pack(pady=10)
         
         def save_pdf():
@@ -358,8 +396,8 @@ class BiplobOCR(TkinterDnD.Tk):
         def close():
             self.success_frame.place_forget()
         
-        ttk.Button(c, text="💾 Save PDF", command=save_pdf, style="Accent.TButton", width=20).pack(pady=5)
-        ttk.Button(c, text="📄 Save Text", command=save_txt, width=20).pack(pady=5)
+        ttk.Button(c, text="Save PDF", command=save_pdf, style="Accent.TButton", width=20).pack(pady=5)
+        ttk.Button(c, text="Save Text", command=save_txt, width=20).pack(pady=5)
         ttk.Button(c, text="Close", command=close, width=20).pack(pady=20)
 
     # ==================== SETTINGS ====================
