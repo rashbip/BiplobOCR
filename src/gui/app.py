@@ -159,7 +159,9 @@ class BiplobOCR(TkinterDnD.Tk):
 
     def _build_sidebar(self):
         """Build the sidebar navigation."""
-        self.sidebar = ttk.Frame(self.main_container, width=240, style="TFrame")
+        self.sidebar = ttk.Frame(self.main_container, width=300, style="TFrame")
+
+
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False) 
         
@@ -167,9 +169,14 @@ class BiplobOCR(TkinterDnD.Tk):
         self.sidebar_header = ttk.Frame(self.sidebar, padding=20)
         self.sidebar_header.pack(fill="x")
         EmojiLabel(self.sidebar_header, text="📜 BiplobOCR", style="Header.TLabel", 
-                   font=(HEADER_FONT, 22, "bold"), foreground=THEME_COLOR).pack(anchor="w")
-        ttk.Label(self.sidebar_header, text="Version 3.3", font=(MAIN_FONT, 8), 
+                   font=(HEADER_FONT, 30, "bold"), foreground=THEME_COLOR).pack(anchor="w")
+
+
+        EmojiLabel(self.sidebar_header, text="Version 3.3", font=(MAIN_FONT, 12), 
                   foreground="gray").pack(anchor="w")
+
+
+
 
         # Navigation
         self.nav_frame = ttk.Frame(self.sidebar, padding=(10, 20))
@@ -189,8 +196,11 @@ class BiplobOCR(TkinterDnD.Tk):
         self.btn_settings = self._create_nav_btn(app_state.t("nav_settings", sanitize=False), "settings", parent=self.footer_frame)
 
 
-        self.lbl_help = ttk.Label(self.footer_frame, text=app_state.t("lbl_help"), foreground="gray", 
-                  font=(MAIN_FONT, 10), cursor="hand2")
+        self.lbl_help = EmojiLabel(self.footer_frame, text=app_state.t("lbl_help"), foreground="gray", 
+                  font=(MAIN_FONT, 14), cursor="hand2")
+
+
+
 
         self.lbl_help.pack(anchor="w", pady=(10, 0))
         self.lbl_help.bind("<Button-1>", lambda e: self._open_help_url())
@@ -199,8 +209,11 @@ class BiplobOCR(TkinterDnD.Tk):
         """Build the global status bar."""
         self.status_bar = ttk.Frame(self.right_panel, style="Card.TFrame", padding=10)
         
-        self.lbl_global_status = ttk.Label(self.status_bar, text=platform_utils.sanitize_for_linux("Processing..."), 
-                                            background=SURFACE_COLOR, font=(MAIN_FONT, 10, "bold"))
+        self.lbl_global_status = EmojiLabel(self.status_bar, text=platform_utils.sanitize_for_linux("Processing..."), 
+                                            background=SURFACE_COLOR, font=(MAIN_FONT, 14, "bold"))
+
+
+
         self.lbl_global_status.pack(side="left", padx=10)
         
         self.global_progress = ttk.Progressbar(self.status_bar, mode="indeterminate", 
@@ -210,7 +223,9 @@ class BiplobOCR(TkinterDnD.Tk):
         self.btn_cancel_global = ttk.Button(self.status_bar, 
                                              command=self.processing_controller.cancel_processing, 
                                              style="Danger.TButton")
-        img_stop = render_emoji_image("🟥 STOP", (MAIN_FONT, 11), "white", self.btn_cancel_global)
+        img_stop = render_emoji_image("🟥 STOP", (MAIN_FONT, 14), "white", self.btn_cancel_global)
+
+
 
         if img_stop:
             self.btn_cancel_global.config(image=img_stop, text="")
@@ -223,13 +238,14 @@ class BiplobOCR(TkinterDnD.Tk):
         
         self.btn_show_log = ttk.Button(self.status_bar, 
                                          command=self.open_log_view, style="TButton")
-        img_log = render_emoji_image("👁 Show Log", (MAIN_FONT, 11), "white", self.btn_show_log)
-
+        img_log = render_emoji_image("👁 See procces", (MAIN_FONT, 14), "white", self.btn_show_log)
         if img_log:
             self.btn_show_log.config(image=img_log, text="")
             self.btn_show_log._img = img_log
         else:
-            self.btn_show_log.config(text="👁 Show Log")
+            self.btn_show_log.config(text="👁 See procces")
+
+
 
         self.btn_show_log.pack(side="right", padx=5)
 
@@ -255,9 +271,8 @@ class BiplobOCR(TkinterDnD.Tk):
         btn = ttk.Button(target, command=lambda: self.switch_tab(view_name), 
                          style="Nav.TButton")
         
-        # On Linux, if text has emojis, render to image
-        img = render_emoji_image(text, (MAIN_FONT, 12), "white", btn)
-
+        # On Linux, render entirely to image for stability
+        img = render_emoji_image(text, (MAIN_FONT, 20), "white", btn)
         if img:
             btn.config(image=img, text="")
             btn._img = img # Keep reference
@@ -266,6 +281,7 @@ class BiplobOCR(TkinterDnD.Tk):
             
         btn.pack(fill="x", pady=2)
         return btn
+
 
     def switch_tab(self, tab):
         """Switch between tabs/views."""
@@ -409,8 +425,8 @@ class BiplobOCR(TkinterDnD.Tk):
         
         c = ttk.Frame(self.success_frame, style="Card.TFrame")
         c.place(relx=0.5, rely=0.5, anchor="center")
-        ttk.Label(c, text=app_state.t("msg_success"), font=(MAIN_FONT, 24), 
-                  background=SURFACE_COLOR).pack(pady=10)
+        EmojiLabel(c, text=app_state.t("msg_success"), font=(MAIN_FONT, 24), 
+                   background=SURFACE_COLOR, foreground="#4CAF50").pack(pady=20)
         
         def save_pdf():
             f = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])

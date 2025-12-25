@@ -34,14 +34,16 @@ class PDFViewer(ttk.Frame):
         self.toolbar.pack(side="top", fill="x")
 
         # Filename Label
-        self.lbl_filename = ttk.Label(self.toolbar, text="No File Open", font=(MAIN_FONT, 10, "bold"))
+        self.lbl_filename = EmojiLabel(self.toolbar, text="No File Open", font=(MAIN_FONT, 10, "bold"))
         self.lbl_filename.pack(side="left", padx=(5, 20))
+
 
         # Navigation
         ttk.Button(self.toolbar, text="First", command=self.first_page, width=5).pack(side="left", padx=1)
         ttk.Button(self.toolbar, text="<", command=self.prev_page, width=3).pack(side="left", padx=1)
-        self.lbl_page = ttk.Label(self.toolbar, text="0 / 0", width=12, anchor="center")
+        self.lbl_page = EmojiLabel(self.toolbar, text="0 / 0", font=(MAIN_FONT, 10))
         self.lbl_page.pack(side="left", padx=5)
+
         ttk.Button(self.toolbar, text=">", command=self.next_page, width=3).pack(side="left", padx=1)
         ttk.Button(self.toolbar, text="Last", command=self.last_page, width=5).pack(side="left", padx=1)
         
@@ -49,8 +51,9 @@ class PDFViewer(ttk.Frame):
 
         # Zoom
         ttk.Button(self.toolbar, text="-", command=self.zoom_out, width=3).pack(side="left")
-        self.lbl_zoom = ttk.Label(self.toolbar, text="100%", width=8, anchor="center")
+        self.lbl_zoom = EmojiLabel(self.toolbar, text="100%", font=(MAIN_FONT, 10))
         self.lbl_zoom.pack(side="left", padx=2)
+
         ttk.Button(self.toolbar, text="+", command=self.zoom_in, width=3).pack(side="left")
         
         ttk.Separator(self.toolbar, orient="vertical").pack(side="left", fill="y", padx=10)

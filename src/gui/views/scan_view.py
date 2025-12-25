@@ -33,17 +33,18 @@ class ScanView(ttk.Frame):
         self.scan_sidebar = ttk.Frame(self.scan_paned, width=300, padding=15)
         self.scan_paned.add(self.scan_sidebar, weight=0)
         
-        ttk.Label(self.scan_sidebar, text="Active Task", font=(HEADER_FONT, 14, "bold"), 
+        EmojiLabel(self.scan_sidebar, text="Active Task", font=(HEADER_FONT, 14, "bold"), 
                   foreground=THEME_COLOR).pack(anchor="w", pady=(0, 20))
+
         btn_open = ttk.Button(self.scan_sidebar, command=self.controller.open_pdf, style="Accent.TButton")
-        img_open = render_emoji_image("📂 " + app_state.t("btn_open_computer", sanitize=False), (MAIN_FONT, 12), "white", btn_open)
-
-
+        img_open = render_emoji_image("📂 " + app_state.t("btn_open_computer", sanitize=False), (MAIN_FONT, 18), "white", btn_open)
         if img_open:
             btn_open.config(image=img_open, text="")
             btn_open._img = img_open
         else:
-            btn_open.config(text="📂 " + app_state.t("btn_open_computer"))
+            btn_open.config(text=app_state.t("btn_open_computer", sanitize=False))
+
+
         btn_open.pack(fill="x", pady=2)
 
         
@@ -63,10 +64,11 @@ class ScanView(ttk.Frame):
         
         dpi_frame = ttk.Frame(opt_frame)
         dpi_frame.pack(fill="x", pady=5)
-        ttk.Label(dpi_frame, text=app_state.t("lbl_dpi")).pack(side="left")
+        EmojiLabel(dpi_frame, text=app_state.t("lbl_dpi"), font=(MAIN_FONT, 14)).pack(side="left")
+
         ttk.Entry(dpi_frame, textvariable=self.controller.var_dpi, width=8).pack(side="right")
 
-        ttk.Label(opt_frame, text=app_state.t("lbl_optimize")).pack(anchor="w", pady=(10, 2))
+        EmojiLabel(opt_frame, text=app_state.t("lbl_optimize"), font=(MAIN_FONT, 14)).pack(anchor="w", pady=(10, 2))
         ttk.Combobox(opt_frame, textvariable=self.controller.var_optimize, 
                      values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
 
@@ -90,9 +92,8 @@ class ScanView(ttk.Frame):
         self.controller.btn_process.pack(fill="x", pady=20)
         
         # Status Label
-        self.controller.lbl_status = ttk.Label(
-            self.scan_sidebar, text=app_state.t("lbl_status_idle"), 
-            foreground="gray", wraplength=250
+        self.controller.lbl_status = EmojiLabel(
+            self.scan_sidebar, text="Ready", font=(MAIN_FONT, 16, "bold"), foreground=THEME_COLOR, wraplength=250
         )
         self.controller.lbl_status.pack(anchor="w", pady=5)
         

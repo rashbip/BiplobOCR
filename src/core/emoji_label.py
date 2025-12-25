@@ -66,109 +66,85 @@ def render_emoji_image(text, font_spec=("DejaVu Sans", 12), fg="white", master=N
 
 
 class EmojiLabel(ttk.Label):
-
     """
-    A label that renders emojis correctly on Linux using pilmoji.
+    A label that renders emojis and Bengali correctly on Linux using images.
     On other platforms, it behaves like a normal ttk.Label.
     """
     def __init__(self, master, text="", font=None, **kwargs):
-        self._orig_text = text
-        self._orig_font = font
-        self._image_ref = None # Prevent GC
-        
+        self._image_ref = None 
         super().__init__(master, **kwargs)
-        
         if text:
             self.set_text(text, font)
 
     def set_text(self, text, font=None):
-        self._orig_text = text
-        if font:
-            self._orig_font = font
-            
         if not IS_LINUX or not Pilmoji:
             self.config(text=text)
-            if font:
-                self.config(font=font)
+            if font: self.config(font=font)
             return
 
-        # On Linux, render to image
-        self._render_emoji_text(text, self._orig_font)
-
-    def _render_emoji_text(self, text, font_spec):
-        # Extract font details
-        family = "DejaVu Sans"
-        size = 14
-
-        style = "normal"
-        
-        if isinstance(font_spec, tuple):
-            family = font_spec[0]
-            if len(font_spec) > 1: size = font_spec[1]
-            if len(font_spec) > 2: style = font_spec[2]
-        
-        # Determine foreground color (Pillow needs valid color name or hex)
-        fg_tk = self.cget("foreground")
-        
-        def standardize_color(color_tk):
-            if not color_tk or str(color_tk).startswith("System"):
-                return (255, 255, 255) # Default white
-            try:
-                # Use winfo_rgb to get (r, g, b) from Tkinter
-                rgb = self.winfo_rgb(color_tk)
-                # Tkinter returns 16-bit values (0-65535), convert to 8-bit
-                return (rgb[0] >> 8, rgb[1] >> 8, rgb[2] >> 8)
-            except:
-                return (255, 255, 255)
-
-        fg = standardize_color(fg_tk)
-        
-        # Create a dummy image to get text size
+        # On Linux, render entirely to image
         try:
-            # We need a real ttf file for pilmoji to work well on Linux
             from .platform_utils import get_base_dir
+            
+            # Extract size/color
+            size = 16
+            if font and isinstance(font, tuple) and len(font) > 1:
+                size = font[1]
+                
+            fg_tk = self.cget("foreground")
+            def get_rgb(color_tk):
+                if not color_tk or str(color_tk).startswith("System"): return (255, 255, 255)
+                try:
+                    rgb = self.winfo_rgb(color_tk)
+                    return (rgb[0] >> 8, rgb[1] >> 8, rgb[2] >> 8)
+                except: return (255, 255, 255)
+            fg = get_rgb(fg_tk)
+
+            # Load Bengali Font
             font_path = os.path.join(get_base_dir(), "assets", "AdorNoirrit.ttf")
+            if not os.path.exists(font_path):
+                font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
             
-            # Fallback font paths for Linux
-            fallbacks = [
-                font_path,
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-                "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
-            ]
-            
-            pil_font = None
-            for p in fallbacks:
-                if os.path.exists(p):
-                    try:
-                        pil_font = ImageFont.truetype(p, size)
-                        break
-                    except: continue
-            
-            if not pil_font:
-                # Last resort: load default PIL font (wont support emojis well but wont crash)
+            try:
+                pil_font = ImageFont.truetype(font_path, size)
+            except:
                 pil_font = ImageFont.load_default()
+
+            # Measure and Draw
+            # We use a large enough temporary image for measurement
+            dummy_img = Image.new("RGBA", (1, 1), (0,0,0,0))
+            draw = ImageDraw.Draw(dummy_img)
             
-            # Measure text
-            w = int(pil_font.getlength(text)) + 30
-            h = int(size * 1.8) + 10
+            # Use raqm if available (for Bengali ligatures)
+            w = int(pil_font.getlength(text)) + 20
+            h = int(size * 1.5) + 10
             
             img = Image.new("RGBA", (w, h), (0,0,0,0))
-            with Pilmoji(img) as pilmoji:
-                pilmoji.text((10, 5), text, font=pil_font, fill=fg)
-
             
-            # Trim image to content
+            # Check if text has emojis
+            has_emoji = any(ord(c) > 0x2000 for c in text)
+            
+            if has_emoji:
+                with Pilmoji(img) as pilmoji:
+                    # Y offset for emojis to align with text
+                    pilmoji.text((5, 5), text, font=pil_font, fill=fg)
+            else:
+                # Direct Pillow rendering for best quality/ligatures
+                draw = ImageDraw.Draw(img)
+                draw.text((5, 5), text, font=pil_font, fill=fg)
+
+            # Crop and set
             bbox = img.getbbox()
-            if bbox:
-                img = img.crop(bbox)
+            if bbox: img = img.crop(bbox)
             
             self._image_ref = ImageTk.PhotoImage(img)
             self.config(image=self._image_ref, text="")
         except Exception as e:
-            from . import platform_utils
+            import logging
             logging.error(f"EmojiLabel error: {e}")
-            # Safety: Sanitize text for Linux to avoid X11 crash
+            from . import platform_utils
             self.config(text=platform_utils.sanitize_for_linux(text), image="")
+
+
 
 

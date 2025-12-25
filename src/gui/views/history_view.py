@@ -19,7 +19,8 @@ class HistoryView(ttk.Frame):
         header = ttk.Frame(self)
         header.pack(fill="x", pady=(0, 20))
         
-        ttk.Label(header, text=app_state.t("nav_history"), style="Header.TLabel").pack(side="left")
+        EmojiLabel(header, text=app_state.t("nav_history"), font=(HEADER_FONT, 20, "bold"), foreground=THEME_COLOR).pack(side="left")
+
         ttk.Button(header, text=app_state.t("btn_clear_history"), command=self.confirm_clear_all, style="Danger.TButton").pack(side="right")
 
         # Scrollable Area
@@ -63,7 +64,8 @@ class HistoryView(ttk.Frame):
             
         data = history.get_all()
         if not data:
-            ttk.Label(self.scrollable_frame, text="No History Found", background=SURFACE_COLOR).pack(pady=20)
+            EmojiLabel(self.scrollable_frame, text="No History Found", background=SURFACE_COLOR, font=(MAIN_FONT, 14)).pack(pady=20)
+
             return
             
         # Header Row (Inside scrollable frame or separate? separate is better for sticky header but let's put simple labels)
@@ -99,15 +101,15 @@ class HistoryView(ttk.Frame):
                 messagebox.showerror("Error", "Source file not found (Moved/Deleted).")
 
         btn_src = ttk.Button(actions, command=open_src)
-        img_src = render_emoji_image("📄 Src", (MAIN_FONT, 10), "white", btn_src)
-
-
+        img_src = render_emoji_image("📄 Src", (MAIN_FONT, 16), "white", btn_src)
         if img_src:
             btn_src.config(image=img_src, text="")
             btn_src._img = img_src
         else:
             btn_src.config(text="📄 Src")
         btn_src.pack(side="left", padx=2)
+
+
 
         if not source: btn_src.config(state="disabled")
         
@@ -119,15 +121,15 @@ class HistoryView(ttk.Frame):
                 messagebox.showerror("Error", "Output file not found (Moved/Deleted).")
 
         btn_out = ttk.Button(actions, command=open_out)
-        img_out = render_emoji_image("👁 View", (MAIN_FONT, 10), "white", btn_out)
-
-
+        img_out = render_emoji_image("👁 View", (MAIN_FONT, 16), "white", btn_out)
         if img_out:
             btn_out.config(image=img_out, text="")
             btn_out._img = img_out
         else:
             btn_out.config(text="👁 View")
         btn_out.pack(side="left", padx=2)
+
+
 
         
         if not output:
@@ -141,9 +143,7 @@ class HistoryView(ttk.Frame):
                 self.controller.view_home.refresh_recent_docs()
 
         btn_del = ttk.Button(actions, style="Danger.TButton", command=delete_me)
-        img_del = render_emoji_image("🗑 Del", (MAIN_FONT, 10), "white", btn_del)
-
-
+        img_del = render_emoji_image("🗑 Del", (MAIN_FONT, 16), "white", btn_del)
         if img_del:
             btn_del.config(image=img_del, text="")
             btn_del._img = img_del
@@ -151,9 +151,13 @@ class HistoryView(ttk.Frame):
             btn_del.config(text="🗑 Del")
         btn_del.pack(side="left", padx=2)
 
+
+
         
         # Status (Before Actions)
-        lbl_status = EmojiLabel(row, text=status, width=15, font=(MAIN_FONT, 11, "bold"), background=SURFACE_COLOR)
+        lbl_status = EmojiLabel(row, text=status, width=15, font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR)
+
+
 
         if "Success" in status or "Completed" in status: lbl_status.config(foreground="#4CAF50")
         elif "Fail" in status: lbl_status.config(foreground="#F44336")
@@ -161,14 +165,15 @@ class HistoryView(ttk.Frame):
         lbl_status.pack(side="right", padx=10)
         
         # Date (Before Status)
-        lbl_date = ttk.Label(row, text=date_str, width=20, font=(MAIN_FONT, 9), foreground="gray", background=SURFACE_COLOR)
+        lbl_date = EmojiLabel(row, text=date_str, font=(MAIN_FONT, 10), background=SURFACE_COLOR)
+        lbl_date.config(foreground="gray")
         lbl_date.pack(side="right", padx=10)
+
         
         # Name (Left, Expand)
-        # Dynamic truncation could be hard with pure Label, but let's try just letting it cut off or wrap
-        # But user wants responsive. 
-        lbl_name = ttk.Label(row, text=fname, font=(MAIN_FONT, 10), background=SURFACE_COLOR)
+        lbl_name = EmojiLabel(row, text=fname, font=(MAIN_FONT, 12), background=SURFACE_COLOR)
         lbl_name.pack(side="left", fill="x", expand=True, padx=10)
+
 
     def confirm_clear_all(self):
         if messagebox.askyesno("Confirm", "Clear entire history log?"):

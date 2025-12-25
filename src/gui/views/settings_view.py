@@ -51,16 +51,18 @@ class SettingsView(ttk.Frame):
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
         # Build UI into settings_scroll_frame
-        lbl = ttk.Label(self.settings_scroll_frame, text=app_state.t("settings_title"), 
+        lbl = EmojiLabel(self.settings_scroll_frame, text=app_state.t("settings_title"), 
                         font=(HEADER_FONT, 20, "bold"))
         lbl.pack(anchor="w", pady=(0, 20))
+
         
         # Hardware Config
         f_hw = ttk.LabelFrame(self.settings_scroll_frame, text=app_state.t("lbl_hw_settings"), padding=20)
         f_hw.pack(fill="x", pady=10)
         
         # GPU Selection
-        ttk.Label(f_hw, text=app_state.t("lbl_dev_select")).pack(anchor="w")
+        EmojiLabel(f_hw, text=app_state.t("lbl_dev_select"), font=(MAIN_FONT, 14)).pack(anchor="w")
+
         gpu_vals = ["Auto"] + self.controller.available_gpus
         self.cb_gpu = ttk.Combobox(f_hw, textvariable=self.controller.var_gpu_device, 
                                     values=gpu_vals, state="readonly")
@@ -70,10 +72,11 @@ class SettingsView(ttk.Frame):
                         variable=self.controller.var_gpu).pack(anchor="w")
         
         # Threads
-        ttk.Label(f_hw, text=f"{app_state.t('lbl_threads')} (Total Cores: {self.controller.cpu_count})").pack(
+        EmojiLabel(f_hw, text=f"{app_state.t('lbl_threads')} (Total Cores: {self.controller.cpu_count})", font=(MAIN_FONT, 14)).pack(
             anchor="w", pady=(10, 0))
-        ttk.Label(f_hw, text="Lower this value if your PC freezes.", 
+        EmojiLabel(f_hw, text="Lower this value if your PC freezes.", 
                   foreground="gray", font=(MAIN_FONT, 8)).pack(anchor="w")
+
         
         # Scale for threads
         self.s_threads = tk.Scale(f_hw, from_=1, to=self.controller.cpu_count, orient="horizontal", 
@@ -86,7 +89,8 @@ class SettingsView(ttk.Frame):
         f_lang.pack(fill="x", pady=10)
         
         # 1. Interface Language
-        ttk.Label(f_lang, text=app_state.t("lbl_lang")).pack(anchor="w")
+        EmojiLabel(f_lang, text=app_state.t("lbl_lang"), font=(MAIN_FONT, 14)).pack(anchor="w")
+
         self.cb_lang = ttk.Combobox(f_lang, textvariable=self.controller.var_lang, 
                                      values=["en", "bn"], state="readonly")
         self.cb_lang.pack(fill="x", pady=(5, 15))
@@ -94,7 +98,8 @@ class SettingsView(ttk.Frame):
         # 2. OCR Language
         self.avail_langs = get_available_languages()
         
-        ttk.Label(f_lang, text=app_state.t("lbl_ocr_lang")).pack(anchor="w")
+        EmojiLabel(f_lang, text=app_state.t("lbl_ocr_lang"), font=(MAIN_FONT, 14)).pack(anchor="w")
+
         self.controller.var_ocr_lang = tk.StringVar(value=app_state.get("ocr_language", "eng"))
         
         self.cb_ocr_lang = ttk.Combobox(f_lang, textvariable=self.controller.var_ocr_lang, 
@@ -102,8 +107,8 @@ class SettingsView(ttk.Frame):
         self.cb_ocr_lang.pack(fill="x", pady=5)
         
         # Data Packs Management
-        ttk.Label(f_lang, text="Installed Data Packs", 
-                  font=(MAIN_FONT, 9, "bold")).pack(anchor="w", pady=(15, 5))
+        EmojiLabel(f_lang, text="Installed Data Packs", 
+                   font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(15, 5))
         
         # Scrollable Container for Packs
         pack_container = ttk.Frame(f_lang, style="Card.TFrame", padding=2)
@@ -125,16 +130,15 @@ class SettingsView(ttk.Frame):
             lambda e: self.packs_canvas.itemconfig(self.packs_window, width=e.width))
 
         btn_add_pack = ttk.Button(f_lang, command=self.add_data_pack)
-        img_add = render_emoji_image("➕ Add Data Pack", (MAIN_FONT, 11), "white", btn_add_pack)
-
+        img_add = render_emoji_image("➕ Add Data Pack", (MAIN_FONT, 16), "white", btn_add_pack)
         if img_add:
             btn_add_pack.config(image=img_add, text="")
             btn_add_pack._img = img_add
         else:
             btn_add_pack.config(text="➕ Add Data Pack")
+        btn_add_pack.pack(anchor="w", pady=10)
 
 
-        btn_add_pack.pack(anchor="e", pady=5)
         
         self.refresh_data_packs_ui()
         
@@ -150,18 +154,19 @@ class SettingsView(ttk.Frame):
         f_danger = ttk.LabelFrame(self.settings_scroll_frame, text="Danger Zone", padding=20)
         f_danger.pack(fill="x", pady=(0, 20))
         
-        ttk.Label(f_danger, text="Reset application to factory defaults. This cannot be undone.", 
-                  foreground="#ff5555").pack(anchor="w")
+        EmojiLabel(f_danger, text="Reset application to factory defaults. This cannot be undone.", 
+                   font=(MAIN_FONT, 10), foreground="#ff5555").pack(anchor="w")
+
         btn_reset = ttk.Button(f_danger, style="Danger.TButton", 
                    command=self.factory_reset)
-        img_reset = render_emoji_image("⚠ Factory Reset", (MAIN_FONT, 11), "white", btn_reset)
-
+        img_reset = render_emoji_image("⚠ Factory Reset", (MAIN_FONT, 16), "white", btn_reset)
         if img_reset:
             btn_reset.config(image=img_reset, text="")
             btn_reset._img = img_reset
         else:
             btn_reset.config(text="⚠ Factory Reset")
-        btn_reset.pack(anchor="w", pady=(10, 0))
+        btn_reset.pack(anchor="w", pady=10)
+
 
 
 
@@ -231,7 +236,9 @@ class SettingsView(ttk.Frame):
             
             # Icon/Name
             icon = "🔴" if is_disabled else "🟢"
-            lbl = EmojiLabel(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 11))
+            lbl = EmojiLabel(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 16))
+
+
 
 
 
@@ -272,7 +279,9 @@ class SettingsView(ttk.Frame):
 
             btn_del = ttk.Button(row, width=3, 
                                   command=make_delete_handler(f), style="Danger.TButton")
-            img_trash = render_emoji_image("🗑", (MAIN_FONT, 12), "white", btn_del)
+            img_trash = render_emoji_image("🗑", (MAIN_FONT, 16), "white", btn_del)
+
+
 
 
             if img_trash:

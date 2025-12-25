@@ -78,13 +78,12 @@ if __name__ == "__main__":
     setup_tesseract_environment()
     setup_ghostscript_environment()
     # loaded_font = setup_fonts()
-    loaded_font = None # Disable custom font to avoid X11 crash
+    loaded_font = None # Disable global registration to avoid X11 BadLength crash
 
     # If font failed to load, set fallbacks in the theme
     from src.core import theme
     if sys.platform.startswith('linux'):
-        # On Linux, avoid custom fonts or 'Segoe UI' which trigger X11 BadLength
-        # Use standard fonts that are likely to be found or handled gracefully
+        # On Linux, avoid custom fonts for standard widgets
         theme.MAIN_FONT = "DejaVu Sans"
         theme.HEADER_FONT = "DejaVu Sans"
     elif not loaded_font:
@@ -93,6 +92,8 @@ if __name__ == "__main__":
     else:
         theme.MAIN_FONT = loaded_font
         theme.HEADER_FONT = loaded_font
+
+
 
 
     from src.main import main

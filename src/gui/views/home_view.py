@@ -26,8 +26,10 @@ class HomeView(ttk.Frame):
             self.controller.open_dropped_pdf(event.data)
 
     def build_ui(self):
-        ttk.Label(self, text=app_state.t("home_welcome"), style="Header.TLabel").pack(anchor="w")
-        ttk.Label(self, text=app_state.t("home_desc"), font=(MAIN_FONT, 12), foreground="gray").pack(anchor="w", pady=(5, 30))
+        EmojiLabel(self, text=app_state.t("home_welcome"), font=(HEADER_FONT, 30, "bold"), foreground=THEME_COLOR).pack(anchor="w")
+        EmojiLabel(self, text=app_state.t("home_desc"), font=(MAIN_FONT, 14), foreground="gray").pack(anchor="w", pady=(5, 30))
+
+
         
         cards_frame = ttk.Frame(self)
         cards_frame.pack(fill="x", pady=20)
@@ -37,9 +39,12 @@ class HomeView(ttk.Frame):
         card1.pack(side="left", fill="both", expand=True, padx=(0, 10))
         c1_inner = ttk.Frame(card1, padding=30, style="Card.TFrame")
         c1_inner.pack(fill="both", expand=True)
-        EmojiLabel(c1_inner, text="📂", font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
-        ttk.Label(c1_inner, text=app_state.t("card_new_task"), font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Label(c1_inner, text=app_state.t("card_new_desc"), font=(MAIN_FONT, 12), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+        EmojiLabel(c1_inner, text="📂", font=(MAIN_FONT, 48), background=SURFACE_COLOR).pack(pady=(0,10))
+        EmojiLabel(c1_inner, text=app_state.t("card_new_task"), font=(MAIN_FONT, 22, "bold"), background=SURFACE_COLOR).pack()
+        EmojiLabel(c1_inner, text=app_state.t("card_new_desc"), font=(MAIN_FONT, 16), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+
+
+
 
         ttk.Button(c1_inner, text=app_state.t("btn_select_computer"), style="Accent.TButton", command=self.controller.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
         
@@ -48,9 +53,12 @@ class HomeView(ttk.Frame):
         card2.pack(side="left", fill="both", expand=True, padx=(10, 0))
         c2_inner = ttk.Frame(card2, padding=30, style="Card.TFrame")
         c2_inner.pack(fill="both", expand=True)
-        EmojiLabel(c2_inner, text="📦", font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
-        ttk.Label(c2_inner, text=app_state.t("batch_title"), font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Label(c2_inner, text="Process multiple PDFs at once", font=(MAIN_FONT, 12), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+        EmojiLabel(c2_inner, text="📦", font=(MAIN_FONT, 48), background=SURFACE_COLOR).pack(pady=(0,10))
+        EmojiLabel(c2_inner, text=app_state.t("batch_title"), font=(MAIN_FONT, 22, "bold"), background=SURFACE_COLOR).pack()
+        EmojiLabel(c2_inner, text="Process multiple PDFs at once", font=(MAIN_FONT, 16), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+
+
+
 
         
         ttk.Button(c2_inner, text="Open Batch Tool", style="TButton", command=lambda: self.controller.switch_tab("batch")).pack(pady=20, ipadx=10, ipady=5)
@@ -60,7 +68,9 @@ class HomeView(ttk.Frame):
         # ttk.Button(c2_inner, text=app_state.t("btn_open_batch"), style="Accent.TButton", command=open_batch_diag).pack(pady=20, ipadx=10, ipady=5)
 
         # Recent Documents (Cards)
-        ttk.Label(self, text=app_state.t("home_recent"), font=(MAIN_FONT, 16, "bold")).pack(anchor="w", pady=(40, 10))
+        EmojiLabel(self, text=app_state.t("home_recent"), font=(MAIN_FONT, 20, "bold")).pack(anchor="w", pady=(40, 10))
+
+
         
         self.recent_container = ttk.Frame(self)
         self.recent_container.pack(fill="both", expand=True)
@@ -72,7 +82,8 @@ class HomeView(ttk.Frame):
         
         data = history.get_all()
         if not data:
-            ttk.Label(self.recent_container, text="No recent activity", foreground="gray").pack(anchor="w", pady=10)
+            EmojiLabel(self.recent_container, text="No recent activity", foreground="gray", font=(MAIN_FONT, 14)).pack(anchor="w", pady=10)
+
             return
 
         for i, item in enumerate(data):
@@ -93,11 +104,13 @@ class HomeView(ttk.Frame):
         info_frame = ttk.Frame(row, style="Card.TFrame")
         info_frame.pack(side="left", fill="x", expand=True)
         
-        ttk.Label(info_frame, text=fname, font=(MAIN_FONT, 10, "bold"), background=SURFACE_COLOR).pack(anchor="w")
+        EmojiLabel(info_frame, text=fname, font=(MAIN_FONT, 12, "bold"), background=SURFACE_COLOR).pack(anchor="w")
         
         meta_txt = f"{date_str} • {status}"
-        lbl_meta = ttk.Label(info_frame, text=meta_txt, font=(MAIN_FONT, 9), background=SURFACE_COLOR, foreground="gray")
+        lbl_meta = EmojiLabel(info_frame, text=meta_txt, font=(MAIN_FONT, 10), background=SURFACE_COLOR)
+        lbl_meta.config(foreground="gray")
         lbl_meta.pack(anchor="w")
+
         
         # Actions
         actions = ttk.Frame(row, style="Card.TFrame")
@@ -129,7 +142,7 @@ class HomeView(ttk.Frame):
                 messagebox.showerror("Error", "Output file not found.")
 
         btn_out = ttk.Button(actions, command=open_out)
-        img_out = render_emoji_image("👁 View", (MAIN_FONT, 8), "white", btn_out)
+        img_out = render_emoji_image("👁 View", (MAIN_FONT, 18), "white", btn_out)
         if img_out:
             btn_out.config(image=img_out, text="")
             btn_out._img = img_out

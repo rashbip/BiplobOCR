@@ -30,7 +30,8 @@ class BatchView(ttk.Frame):
         self.sidebar = ttk.Frame(paned, width=300, padding=(0, 0, 10, 0))
         paned.add(self.sidebar, weight=0)
         
-        ttk.Label(self.sidebar, text=app_state.t("lbl_batch_opts"), style="Header.TLabel").pack(anchor="w", pady=(20, 10))
+        EmojiLabel(self.sidebar, text=app_state.t("lbl_batch_opts"), font=(HEADER_FONT, 20, "bold"), foreground=THEME_COLOR).pack(anchor="w", pady=(20, 10))
+
         
         # Options Group
         opt_frame = ttk.LabelFrame(self.sidebar, text=app_state.t("grp_options"), padding=10)
@@ -43,10 +44,11 @@ class BatchView(ttk.Frame):
         
         dpi_frame = ttk.Frame(opt_frame)
         dpi_frame.pack(fill="x", pady=5)
-        ttk.Label(dpi_frame, text=app_state.t("lbl_dpi")).pack(side="left")
+        EmojiLabel(dpi_frame, text=app_state.t("lbl_dpi"), font=(MAIN_FONT, 14)).pack(side="left")
         ttk.Entry(dpi_frame, textvariable=self.controller.var_dpi, width=8).pack(side="right")
 
-        ttk.Label(opt_frame, text=app_state.t("lbl_optimize")).pack(anchor="w", pady=(10, 2))
+        EmojiLabel(opt_frame, text=app_state.t("lbl_optimize"), font=(MAIN_FONT, 14)).pack(anchor="w", pady=(10, 2))
+
         ttk.Combobox(opt_frame, textvariable=self.controller.var_optimize, values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
 
         # Languages Group
@@ -62,14 +64,14 @@ class BatchView(ttk.Frame):
 
         # Action Button (Start)
         self.controller.btn_start_batch = ttk.Button(self.sidebar, command=self.controller.start_batch_processing, style="Accent.TButton")
-        img_start = render_emoji_image(app_state.t("btn_start_batch", sanitize=False), (MAIN_FONT, 12), "white", self.controller.btn_start_batch)
-
-
+        img_start = render_emoji_image(app_state.t("btn_start_batch", sanitize=False), (MAIN_FONT, 18), "white", self.controller.btn_start_batch)
         if img_start:
             self.controller.btn_start_batch.config(image=img_start, text="")
             self.controller.btn_start_batch._img = img_start
         else:
-            self.controller.btn_start_batch.config(text=app_state.t("btn_start_batch"))
+            self.controller.btn_start_batch.config(text=app_state.t("btn_start_batch", sanitize=False))
+
+
         self.controller.btn_start_batch.pack(fill="x", pady=20)
 
 
@@ -78,32 +80,32 @@ class BatchView(ttk.Frame):
         main_content = ttk.Frame(paned, padding=(10, 0, 0, 0))
         paned.add(main_content, weight=1)
 
-        ttk.Label(main_content, text=app_state.t("batch_title"), style="Header.TLabel").pack(anchor="w", pady=(20, 10))
-        ttk.Label(main_content, text=app_state.t("batch_desc"), foreground="gray").pack(anchor="w", pady=(0, 20))
+        EmojiLabel(main_content, text=app_state.t("batch_title"), font=(HEADER_FONT, 20, "bold"), foreground=THEME_COLOR).pack(anchor="w", pady=(20, 10))
+        EmojiLabel(main_content, text=app_state.t("batch_desc"), font=(MAIN_FONT, 14), foreground="gray").pack(anchor="w", pady=(0, 20))
+
         
         toolbar = ttk.Frame(main_content)
         toolbar.pack(fill="x", pady=5)
         btn_add = ttk.Button(toolbar, command=self.controller.add_batch_files, style="Accent.TButton", width=15)
-        img_add = render_emoji_image(app_state.t("btn_add_files", sanitize=False), (MAIN_FONT, 12), "white", btn_add)
-
-
+        img_add = render_emoji_image(app_state.t("btn_add_files", sanitize=False), (MAIN_FONT, 18), "white", btn_add)
         if img_add:
             btn_add.config(image=img_add, text="")
             btn_add._img = img_add
         else:
-            btn_add.config(text=app_state.t("btn_add_files"))
+            btn_add.config(text=app_state.t("btn_add_files", sanitize=False))
+
+
         btn_add.pack(side="left", padx=(0, 5))
 
         btn_clear = ttk.Button(toolbar, command=self.controller.clear_batch_files)
-        img_clear = render_emoji_image(app_state.t("btn_clear_list", sanitize=False), (MAIN_FONT, 12), "white", btn_clear)
-
-
+        img_clear = render_emoji_image(app_state.t("btn_clear_list", sanitize=False), (MAIN_FONT, 18), "white", btn_clear)
         if img_clear:
             btn_clear.config(image=img_clear, text="")
             btn_clear._img = img_clear
         else:
-            btn_clear.config(text=app_state.t("btn_clear_list"))
-        btn_clear.pack(side="left")
+            btn_clear.config(text=app_state.t("btn_clear_list", sanitize=False))
+        btn_clear.pack(side="left", padx=(0, 5))
+
 
 
         cols = ("Filename", "Status")
