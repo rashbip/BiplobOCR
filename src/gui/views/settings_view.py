@@ -89,7 +89,7 @@ class SettingsView(ttk.Frame):
         EmojiLabel(hw_group, text=f"{app_state.t('lbl_threads')} (Total Cores: {self.controller.cpu_count})", font=(MAIN_FONT, 14)).pack(
             anchor="w", pady=(10, 0))
         EmojiLabel(hw_group, text="Lower this value if your PC freezes.", 
-                  foreground="gray", font=(MAIN_FONT, 8)).pack(anchor="w")
+                  foreground="gray", font=(MAIN_FONT, 10)).pack(anchor="w")
 
         
         # Scale for threads
@@ -174,7 +174,7 @@ class SettingsView(ttk.Frame):
         EmojiLabel(danger_group, text=app_state.t("lbl_danger_zone"), font=(MAIN_FONT, 10, "bold"), foreground="#ff5555").pack(anchor="w", pady=(0, 10))
         
         EmojiLabel(danger_group, text=app_state.t("lbl_factory_reset_desc"), 
-                   font=(MAIN_FONT, 10), foreground="#ff5555").pack(anchor="w")
+                   font=(MAIN_FONT, 12), foreground="#ff5555").pack(anchor="w")
 
 
 
@@ -270,7 +270,7 @@ class SettingsView(ttk.Frame):
             
             # Actions - Protect OSD
             if clean_name == "osd.traineddata":
-                ttk.Label(row, text="(System)", font=(MAIN_FONT, 8), 
+                ttk.Label(row, text="(System)", font=(MAIN_FONT, 10), 
                           foreground="gray").pack(side="right", padx=10)
                 continue
             

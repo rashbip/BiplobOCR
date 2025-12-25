@@ -65,7 +65,7 @@ class PDFViewer(ttk.Frame):
         else: btn_prev.config(text="<")
         btn_prev.pack(side="left", padx=1)
 
-        self.lbl_page = EmojiLabel(self.toolbar, text="0 / 0", font=(MAIN_FONT, 10))
+        self.lbl_page = EmojiLabel(self.toolbar, text="0 / 0", font=(MAIN_FONT, 12))
         self.lbl_page.pack(side="left", padx=5)
 
         btn_next = ttk.Button(self.toolbar, command=self.next_page, width=3)
@@ -90,7 +90,7 @@ class PDFViewer(ttk.Frame):
         else: btn_zout.config(text="-")
         btn_zout.pack(side="left")
 
-        self.lbl_zoom = EmojiLabel(self.toolbar, text="100%", font=(MAIN_FONT, 10))
+        self.lbl_zoom = EmojiLabel(self.toolbar, text="100%", font=(MAIN_FONT, 12))
         self.lbl_zoom.pack(side="left", padx=2)
 
         btn_zin = ttk.Button(self.toolbar, command=self.zoom_in, width=3)
@@ -134,7 +134,7 @@ class PDFViewer(ttk.Frame):
 
         # 2. Text View (Raw Text)
         self.text_frame = ttk.Frame(self.container)
-        self.text_widget = tk.Text(self.text_frame, wrap="word", font=(MAIN_FONT, 11), padx=20, pady=20)
+        self.text_widget = tk.Text(self.text_frame, wrap="word", font=(MAIN_FONT, 12), padx=20, pady=20)
         self.text_scroll = ttk.Scrollbar(self.text_frame, orient="vertical", command=self.text_widget.yview)
         self.text_widget.config(yscrollcommand=self.text_scroll.set)
         

@@ -77,18 +77,18 @@ if __name__ == "__main__":
     setup_python_environment()
     setup_tesseract_environment()
     setup_ghostscript_environment()
-    # loaded_font = setup_fonts()
-    loaded_font = None # Disable global registration to avoid X11 BadLength crash
+    loaded_font = setup_fonts()
+    # loaded_font = None # Disable global registration to avoid X11 BadLength crash
 
     # If font failed to load, set fallbacks in the theme
     from src.core import theme
-    if sys.platform.startswith('linux'):
-        # On Linux, avoid custom fonts for standard widgets
-        theme.MAIN_FONT = "DejaVu Sans"
-        theme.HEADER_FONT = "DejaVu Sans"
-    elif not loaded_font:
-        theme.MAIN_FONT = "Segoe UI"
-        theme.HEADER_FONT = "Segoe UI"
+    if not loaded_font:
+        if sys.platform.startswith('linux'):
+             theme.MAIN_FONT = "DejaVu Sans"
+             theme.HEADER_FONT = "DejaVu Sans"
+        else:
+             theme.MAIN_FONT = "Segoe UI"
+             theme.HEADER_FONT = "Segoe UI"
     else:
         theme.MAIN_FONT = loaded_font
         theme.HEADER_FONT = loaded_font

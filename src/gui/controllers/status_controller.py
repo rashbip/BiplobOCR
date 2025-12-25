@@ -101,14 +101,12 @@ class StatusController:
 
     def update_batch_status_detail(self, val, idx, total_docs, fname, page, total_pages, etr_str, pdf_path=None):
         """Update batch processing status with detailed progress."""
-        # Monotonic progress check
-        if page > self.batch_max_seen_page:
-            self.batch_max_seen_page = page
-            # Update Log View Image ONLY on page change
+        # Update Log View Image on page change
+        current_last_page = getattr(self, 'last_page', -1)
+        if page != current_last_page:
             if hasattr(self.app, 'log_window') and self.app.log_window.winfo_exists() and pdf_path:
                 self.app.after(0, lambda: self.app.log_window.update_image(pdf_path, page - 1))
-        else:
-            page = self.batch_max_seen_page
+        
             
         self._update_state(pdf_path, page)
 

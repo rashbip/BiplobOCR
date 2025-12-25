@@ -124,7 +124,7 @@ class HomeView(ttk.Frame):
         EmojiLabel(info_frame, text=fname, font=(MAIN_FONT, 12, "bold"), background=SURFACE_COLOR).pack(anchor="w")
         
         meta_txt = f"{date_str} • {status}"
-        lbl_meta = EmojiLabel(info_frame, text=meta_txt, font=(MAIN_FONT, 10), background=SURFACE_COLOR)
+        lbl_meta = EmojiLabel(info_frame, text=meta_txt, font=(MAIN_FONT, 12), background=SURFACE_COLOR)
         lbl_meta.config(foreground="gray")
         lbl_meta.pack(anchor="w")
 

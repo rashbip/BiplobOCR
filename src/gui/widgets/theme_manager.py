@@ -35,20 +35,20 @@ def setup_custom_theme(root):
     style.configure("TFrame", background=BG_COLOR)
     style.configure("Card.TFrame", background=SURFACE_COLOR, relief="flat")
     
-    style.configure("TLabel", background=BG_COLOR, foreground=FG_COLOR, font=(MAIN_FONT, 10))
+    style.configure("TLabel", background=BG_COLOR, foreground=FG_COLOR, font=(MAIN_FONT, 12))
     style.configure("Header.TLabel", font=(HEADER_FONT, 24, "bold"), foreground=THEME_COLOR)
     
     style.configure("TButton", background=SURFACE_COLOR, foreground=FG_COLOR, borderwidth=0, 
-                    padding=6, font=(MAIN_FONT, 10))
+                    padding=6, font=(MAIN_FONT, 12))
     style.map("TButton", background=[("active", "#3e3e3e"), ("pressed", "#4e4e4e")], 
               foreground=[("active", "white")])
     
     style.configure("Accent.TButton", background=THEME_COLOR, foreground="white", 
-                    font=(MAIN_FONT, 10, "bold"))
+                    font=(MAIN_FONT, 12, "bold"))
     style.map("Accent.TButton", background=[("active", THEME_COLOR_HOVER), ("pressed", THEME_COLOR_ACTIVE)])
     
     style.configure("Danger.TButton", background="#800000", foreground="white", 
-                    font=(MAIN_FONT, 10, "bold"))
+                    font=(MAIN_FONT, 12, "bold"))
     style.map("Danger.TButton", background=[("active", "#5a0000")])
     
     style.configure("TEntry", fieldbackground=SURFACE_COLOR, foreground=FG_COLOR, padding=5)
@@ -58,10 +58,10 @@ def setup_custom_theme(root):
               selectbackground=[("readonly", THEME_COLOR)])
     
     style.configure("Treeview", background=SURFACE_COLOR, fieldbackground=SURFACE_COLOR, 
-                    foreground=FG_COLOR, borderwidth=0, rowheight=30, font=(MAIN_FONT, 10))
+                    foreground=FG_COLOR, borderwidth=0, rowheight=30, font=(MAIN_FONT, 11))
     style.map("Treeview", background=[("selected", THEME_COLOR)], foreground=[("selected", "white")])
     style.configure("Treeview.Heading", background=BG_COLOR, foreground="gray", 
-                    font=(MAIN_FONT, 9, "bold"), relief="flat")
+                    font=(MAIN_FONT, 11, "bold"), relief="flat")
     style.map("Treeview.Heading", background=[("active", BG_COLOR)])
     
     style.configure("TSeparator", background="#3e3e3e")

@@ -97,6 +97,9 @@ class HistoryView(ttk.Frame):
         
         # Layout: [Name (Expand)] [Date (Fixed)] [Status (Fixed)] [Actions (Fixed)]
         
+        # Name
+        EmojiLabel(row, text=fname, font=(MAIN_FONT, 14, "bold"), background=SURFACE_COLOR).pack(side="left", padx=10)
+        
         # Actions Panel (Right)
         actions = ttk.Frame(row, style="Card.TFrame")
         actions.pack(side="right", padx=10)
@@ -175,7 +178,7 @@ class HistoryView(ttk.Frame):
         lbl_status.pack(side="right", padx=10)
         
         # Date (Before Status)
-        lbl_date = EmojiLabel(row, text=date_str, font=(MAIN_FONT, 10), background=SURFACE_COLOR)
+        lbl_date = EmojiLabel(row, text=date_str, font=(MAIN_FONT, 12), background=SURFACE_COLOR)
         lbl_date.config(foreground="gray")
         lbl_date.pack(side="right", padx=10)
 
