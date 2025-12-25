@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinterdnd2 import DND_FILES
-from ...core.theme import SURFACE_COLOR, THEME_COLOR
+from ...core.theme import SURFACE_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
+from ...core.emoji_label import EmojiLabel, render_emoji_image
+
 
 class BatchView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -59,8 +61,15 @@ class BatchView(ttk.Frame):
         self._build_language_checkboxes()
 
         # Action Button (Start)
-        self.controller.btn_start_batch = ttk.Button(self.sidebar, text=app_state.t("btn_start_batch"), command=self.controller.start_batch_processing, style="Accent.TButton")
+        self.controller.btn_start_batch = ttk.Button(self.sidebar, command=self.controller.start_batch_processing, style="Accent.TButton")
+        img_start = render_emoji_image(app_state.t("btn_start_batch"), (MAIN_FONT, 10), "white", self.controller.btn_start_batch)
+        if img_start:
+            self.controller.btn_start_batch.config(image=img_start, text="")
+            self.controller.btn_start_batch._img = img_start
+        else:
+            self.controller.btn_start_batch.config(text=app_state.t("btn_start_batch"))
         self.controller.btn_start_batch.pack(fill="x", pady=20)
+
 
 
         # --- Main Content (File List) ---
@@ -72,8 +81,24 @@ class BatchView(ttk.Frame):
         
         toolbar = ttk.Frame(main_content)
         toolbar.pack(fill="x", pady=5)
-        ttk.Button(toolbar, text=app_state.t("btn_add_files"), command=self.controller.add_batch_files, style="Accent.TButton", width=15).pack(side="left", padx=(0, 5))
-        ttk.Button(toolbar, text=app_state.t("btn_clear_list"), command=self.controller.clear_batch_files).pack(side="left")
+        btn_add = ttk.Button(toolbar, command=self.controller.add_batch_files, style="Accent.TButton", width=15)
+        img_add = render_emoji_image(app_state.t("btn_add_files"), (MAIN_FONT, 10), "white", btn_add)
+        if img_add:
+            btn_add.config(image=img_add, text="")
+            btn_add._img = img_add
+        else:
+            btn_add.config(text=app_state.t("btn_add_files"))
+        btn_add.pack(side="left", padx=(0, 5))
+
+        btn_clear = ttk.Button(toolbar, command=self.controller.clear_batch_files)
+        img_clear = render_emoji_image(app_state.t("btn_clear_list"), (MAIN_FONT, 10), "white", btn_clear)
+        if img_clear:
+            btn_clear.config(image=img_clear, text="")
+            btn_clear._img = img_clear
+        else:
+            btn_clear.config(text=app_state.t("btn_clear_list"))
+        btn_clear.pack(side="left")
+
 
         cols = ("Filename", "Status")
         self.controller.batch_tree = ttk.Treeview(main_content, columns=cols, show="headings")

@@ -5,6 +5,9 @@ from ...core.history_manager import history
 from ...core.theme import SURFACE_COLOR, BG_COLOR, THEME_COLOR, FG_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
 from ...core import platform_utils
+from ...core.emoji_label import EmojiLabel, render_emoji_image
+
+
 
 class HistoryView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -95,9 +98,16 @@ class HistoryView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Source file not found (Moved/Deleted).")
 
-        btn_src = tk.Button(actions, text=platform_utils.sanitize_for_linux("📄 Src"), font=(MAIN_FONT, 8), bg="#3e3e3e", fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_src)
+        btn_src = ttk.Button(actions, command=open_src)
+        img_src = render_emoji_image("📄 Src", (MAIN_FONT, 8), "white", btn_src)
+        if img_src:
+            btn_src.config(image=img_src, text="")
+            btn_src._img = img_src
+        else:
+            btn_src.config(text="📄 Src")
         btn_src.pack(side="left", padx=2)
-        if not source: btn_src.config(state="disabled", bg="#2a2a2a", fg="gray")
+
+        if not source: btn_src.config(state="disabled")
         
         # 2. Output Open
         def open_out():
@@ -106,11 +116,18 @@ class HistoryView(ttk.Frame):
             else:
                 messagebox.showerror("Error", "Output file not found (Moved/Deleted).")
 
-        btn_out = tk.Button(actions, text=platform_utils.sanitize_for_linux("👁 View"), font=(MAIN_FONT, 8), bg=THEME_COLOR, fg="white", bd=0, padx=8, pady=4, cursor="hand2", command=open_out)
+        btn_out = ttk.Button(actions, command=open_out)
+        img_out = render_emoji_image("👁 View", (MAIN_FONT, 8), "white", btn_out)
+        if img_out:
+            btn_out.config(image=img_out, text="")
+            btn_out._img = img_out
+        else:
+            btn_out.config(text="👁 View")
         btn_out.pack(side="left", padx=2)
+
         
         if not output:
-            btn_out.config(state="disabled", bg="#2a2a2a", fg="gray", cursor="arrow")
+            btn_out.config(state="disabled")
 
         # 3. Delete
         def delete_me():
@@ -119,11 +136,18 @@ class HistoryView(ttk.Frame):
                 self.refresh()
                 self.controller.view_home.refresh_recent_docs()
 
-        btn_del = tk.Button(actions, text=platform_utils.sanitize_for_linux("🗑"), font=(MAIN_FONT, 8), bg="#2a2a2a", fg="#ff5555", bd=0, padx=8, pady=4, cursor="hand2", command=delete_me)
+        btn_del = ttk.Button(actions, style="Danger.TButton", command=delete_me)
+        img_del = render_emoji_image("🗑 Del", (MAIN_FONT, 8), "white", btn_del)
+        if img_del:
+            btn_del.config(image=img_del, text="")
+            btn_del._img = img_del
+        else:
+            btn_del.config(text="🗑 Del")
         btn_del.pack(side="left", padx=2)
+
         
         # Status (Before Actions)
-        lbl_status = ttk.Label(row, text=status, width=15, font=(MAIN_FONT, 9, "bold"), background=SURFACE_COLOR)
+        lbl_status = EmojiLabel(row, text=status, width=15, font=(MAIN_FONT, 9, "bold"), background=SURFACE_COLOR)
         if "Success" in status or "Completed" in status: lbl_status.config(foreground="#4CAF50")
         elif "Fail" in status: lbl_status.config(foreground="#F44336")
         else: lbl_status.config(foreground="orange")

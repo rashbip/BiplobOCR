@@ -44,8 +44,11 @@ from ..core.constants import APP_NAME
 from ..core.config_manager import state as app_state
 from ..core.history_manager import history
 from ..core import platform_utils
-from ..core.theme import THEME_COLOR, BG_COLOR, SURFACE_COLOR, MAIN_FONT, HEADER_FONT
 from ..core import gpu_manager
+from ..core.emoji_label import EmojiLabel, render_emoji_image
+from ..core.theme import THEME_COLOR, BG_COLOR, SURFACE_COLOR, MAIN_FONT, HEADER_FONT
+
+
 
 # Controllers
 from .controllers.status_controller import StatusController
@@ -163,7 +166,7 @@ class BiplobOCR(TkinterDnD.Tk):
         # Header
         self.sidebar_header = ttk.Frame(self.sidebar, padding=20)
         self.sidebar_header.pack(fill="x")
-        ttk.Label(self.sidebar_header, text=platform_utils.sanitize_for_linux("BiplobOCR"), style="Header.TLabel", 
+        EmojiLabel(self.sidebar_header, text="📜 BiplobOCR", style="Header.TLabel", 
                   font=(HEADER_FONT, 18, "bold"), foreground=THEME_COLOR).pack(anchor="w")
         ttk.Label(self.sidebar_header, text="Version 3.3", font=(MAIN_FONT, 8), 
                   foreground="gray").pack(anchor="w")
@@ -173,14 +176,16 @@ class BiplobOCR(TkinterDnD.Tk):
         self.nav_frame.pack(fill="x", expand=True, anchor="n")
         
         self.btn_home = self._create_nav_btn(app_state.t("nav_home"), "home")
-        self.btn_tools = self._create_nav_btn(app_state.t("nav_tools"), "scan")
+        self.btn_tools = self._create_nav_btn(app_state.t("nav_scan"), "scan")
         self.btn_batch = self._create_nav_btn(app_state.t("nav_batch"), "batch")
         self.btn_history = self._create_nav_btn(app_state.t("nav_history"), "history")
+
 
         # Footer
         self.footer_frame = ttk.Frame(self.sidebar, padding=20)
         self.footer_frame.pack(side="bottom", fill="x")
         self.btn_settings = self._create_nav_btn(app_state.t("nav_settings"), "settings", parent=self.footer_frame)
+
         self.lbl_help = ttk.Label(self.footer_frame, text=app_state.t("lbl_help"), foreground="gray", 
                   cursor="hand2")
         self.lbl_help.pack(anchor="w", pady=(10, 0))
@@ -198,13 +203,28 @@ class BiplobOCR(TkinterDnD.Tk):
                                                 style="Horizontal.TProgressbar", length=300)
         self.global_progress.pack(side="left", fill="x", expand=True, padx=20)
         
-        self.btn_cancel_global = ttk.Button(self.status_bar, text=platform_utils.sanitize_for_linux("STOP"), 
+        self.btn_cancel_global = ttk.Button(self.status_bar, 
                                              command=self.processing_controller.cancel_processing, 
                                              style="Danger.TButton")
+        img_stop = render_emoji_image("🟥 STOP", (MAIN_FONT, 9), "white", self.btn_cancel_global)
+        if img_stop:
+            self.btn_cancel_global.config(image=img_stop, text="")
+            self.btn_cancel_global._img = img_stop # Keep reference
+        else:
+            self.btn_cancel_global.config(text="🟥 STOP")
+
+
         self.btn_cancel_global.pack(side="right", padx=10)
         
-        self.btn_show_log = ttk.Button(self.status_bar, text=platform_utils.sanitize_for_linux("Show Log"), 
-                                        command=self.open_log_view, style="TButton")
+        self.btn_show_log = ttk.Button(self.status_bar, 
+                                         command=self.open_log_view, style="TButton")
+        img_log = render_emoji_image("👁 Show Log", (MAIN_FONT, 9), "white", self.btn_show_log)
+        if img_log:
+            self.btn_show_log.config(image=img_log, text="")
+            self.btn_show_log._img = img_log
+        else:
+            self.btn_show_log.config(text="👁 Show Log")
+
         self.btn_show_log.pack(side="right", padx=5)
 
     def _init_views(self):
@@ -223,12 +243,21 @@ class BiplobOCR(TkinterDnD.Tk):
 
 
     
-    def _create_nav_btn(self, text, tab, parent=None):
+    def _create_nav_btn(self, text, view_name, parent=None):
         """Create a navigation button."""
-        if not parent:
-            parent = self.nav_frame
-        btn = ttk.Button(parent, text=text, command=lambda: self.switch_tab(tab), style="TButton")
-        btn.pack(fill="x", pady=2, anchor="w")
+        target = parent if parent else self.nav_frame
+        btn = ttk.Button(target, command=lambda: self.switch_tab(view_name), 
+                         style="Nav.TButton")
+        
+        # On Linux, if text has emojis, render to image
+        img = render_emoji_image(text, (MAIN_FONT, 10), THEME_COLOR, btn)
+        if img:
+            btn.config(image=img, text="")
+            btn._img = img # Keep reference
+        else:
+            btn.config(text=text)
+            
+        btn.pack(fill="x", pady=2)
         return btn
 
     def switch_tab(self, tab):

@@ -11,6 +11,9 @@ from ...core.theme import BG_COLOR, SURFACE_COLOR, FG_COLOR, THEME_COLOR, MAIN_F
 from ...core.config_manager import state as app_state
 from ...core.ocr_engine import get_available_languages, get_tessdata_dir
 from ...core import platform_utils
+from ...core.emoji_label import EmojiLabel, render_emoji_image
+
+
 
 
 
@@ -121,7 +124,15 @@ class SettingsView(ttk.Frame):
         self.packs_canvas.bind('<Configure>', 
             lambda e: self.packs_canvas.itemconfig(self.packs_window, width=e.width))
 
-        btn_add_pack = ttk.Button(f_lang, text=platform_utils.sanitize_for_linux("➕ Add Data Pack"), command=self.add_data_pack)
+        btn_add_pack = ttk.Button(f_lang, command=self.add_data_pack)
+        img_add = render_emoji_image("➕ Add Data Pack", (MAIN_FONT, 9), "white", btn_add_pack)
+        if img_add:
+            btn_add_pack.config(image=img_add, text="")
+            btn_add_pack._img = img_add
+        else:
+            btn_add_pack.config(text="➕ Add Data Pack")
+
+
         btn_add_pack.pack(anchor="e", pady=5)
         
         self.refresh_data_packs_ui()
@@ -140,8 +151,17 @@ class SettingsView(ttk.Frame):
         
         ttk.Label(f_danger, text="Reset application to factory defaults. This cannot be undone.", 
                   foreground="#ff5555").pack(anchor="w")
-        ttk.Button(f_danger, text=platform_utils.sanitize_for_linux("⚠ Factory Reset"), style="Danger.TButton", 
-                   command=self.factory_reset).pack(anchor="w", pady=(10, 0))
+        btn_reset = ttk.Button(f_danger, style="Danger.TButton", 
+                   command=self.factory_reset)
+        img_reset = render_emoji_image("⚠ Factory Reset", (MAIN_FONT, 9), "white", btn_reset)
+        if img_reset:
+            btn_reset.config(image=img_reset, text="")
+            btn_reset._img = img_reset
+        else:
+            btn_reset.config(text="⚠ Factory Reset")
+        btn_reset.pack(anchor="w", pady=(10, 0))
+
+
 
     def factory_reset(self):
         """Reset application to factory defaults."""
@@ -208,8 +228,9 @@ class SettingsView(ttk.Frame):
             row.pack(fill="x", pady=1)
             
             # Icon/Name
-            icon = platform_utils.sanitize_for_linux("🔴") if is_disabled else platform_utils.sanitize_for_linux("🟢")
-            lbl = ttk.Label(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 9))
+            icon = "🔴" if is_disabled else "🟢"
+            lbl = EmojiLabel(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 9))
+
 
             if is_disabled:
                 lbl.config(foreground="gray")
@@ -246,8 +267,16 @@ class SettingsView(ttk.Frame):
                             messagebox.showerror("Error", str(e))
                 return delete_pack
 
-            btn_del = ttk.Button(row, text=platform_utils.sanitize_for_linux("🗑"), width=3, 
+            btn_del = ttk.Button(row, width=3, 
                                   command=make_delete_handler(f), style="Danger.TButton")
+            img_trash = render_emoji_image("🗑", (MAIN_FONT, 9), "white", btn_del)
+            if img_trash:
+                btn_del.config(image=img_trash, text="")
+                btn_del._img = img_trash
+            else:
+                btn_del.config(text="🗑")
+
+
             btn_del.pack(side="right", padx=2)
             
             btn_toggle = ttk.Button(row, text="Enable" if is_disabled else "Disable", 

@@ -330,7 +330,9 @@ class ProcessingController:
                 if self.stop_flag:
                     raise Exception("Process Cancelled")
                      
-                self.app.after(0, lambda id=item_id: self.app.batch_tree.set(id, "Status", "✅ Done"))
+                from ..core import platform_utils
+                self.app.after(0, lambda id=item_id: self.app.batch_tree.set(id, "Status", platform_utils.sanitize_for_linux("✅ Done")))
+
                 history.add_entry(fname, "Batch Success", "N/A", source_path=fpath, output_path=out_path)
                 success_count += 1
                 

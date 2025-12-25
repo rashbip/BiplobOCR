@@ -209,15 +209,16 @@ def sanitize_for_linux(text):
     
     # Comprehensive replacement for emojis used in the app that crash X11
     emojis = [
-        "📜", "📂", "📦", "👁", "🗑", "✅", "🟥", "💾", "📄", 
-        "🏠", "🛠", "🕒", "⚙️", "➕", "▶", "🔒", "🔑", "🔍",
-        "🔴", "🟢", "⚠", "🖼"
+        "📜", "🏠", "➕", "📦", "🕒", "⚙️", "📂", "👁", "🗑", "✅", "🔴", "🟢", "⚠", "🟥", "◀", "▶", "🔒", "🔑", "🔍", "🖼", "📄"
     ]
+
     clean_text = str(text)
     for e in emojis:
         clean_text = clean_text.replace(e, "")
     
     return clean_text.strip()
+
+
 
 
 

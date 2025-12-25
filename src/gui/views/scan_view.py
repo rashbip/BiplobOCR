@@ -9,8 +9,11 @@ from ...core.theme import SURFACE_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
 from ...core.config_manager import state as app_state
 from ...core.ocr_engine import get_available_languages
 from ...core import platform_utils
+from ...core.emoji_label import EmojiLabel, render_emoji_image
+
 
 from ..pdf_viewer import PDFViewer
+
 
 
 class ScanView(ttk.Frame):
@@ -32,8 +35,15 @@ class ScanView(ttk.Frame):
         
         ttk.Label(self.scan_sidebar, text="Active Task", font=(HEADER_FONT, 14, "bold"), 
                   foreground=THEME_COLOR).pack(anchor="w", pady=(0, 20))
-        ttk.Button(self.scan_sidebar, text=platform_utils.sanitize_for_linux("📂 Open New PDF"), 
-                   command=self.controller.open_pdf).pack(fill="x", pady=2)
+        btn_open = ttk.Button(self.scan_sidebar, command=self.controller.open_pdf, style="Accent.TButton")
+        img_open = render_emoji_image("📂 " + app_state.t("btn_open_computer"), (MAIN_FONT, 10), "white", btn_open)
+        if img_open:
+            btn_open.config(image=img_open, text="")
+            btn_open._img = img_open
+        else:
+            btn_open.config(text="📂 " + app_state.t("btn_open_computer"))
+        btn_open.pack(fill="x", pady=2)
+
         
         # Options
         opt_frame = ttk.LabelFrame(self.scan_sidebar, text=app_state.t("grp_options"), padding=10)

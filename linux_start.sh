@@ -19,10 +19,11 @@ export PATH="$BASE_DIR/tesseract/linux:$PATH"
 
 # 3. Setup Python (if bundled, otherwise use system)
 # Check for bundled python
-if [ -f "$BASE_DIR/python/linux/bin/python" ]; then
+if [ -f "$BASE_DIR/python/linux/venv/bin/python" ]; then
     echo "Using bundled Python..."
-    PYTHON_EXE="$BASE_DIR/python/linux/bin/python"
+    PYTHON_EXE="$BASE_DIR/python/linux/venv/bin/python"
     export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+
 else
     echo "Using system Python..."
     PYTHON_EXE="python3"

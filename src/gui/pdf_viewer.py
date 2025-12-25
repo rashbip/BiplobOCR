@@ -5,6 +5,8 @@ from PIL import Image, ImageTk
 import math
 from ..core.theme import MAIN_FONT, HEADER_FONT
 from ..core import platform_utils
+from ..core.emoji_label import EmojiLabel, render_emoji_image
+
 
 
 class PDFViewer(ttk.Frame):
@@ -58,7 +60,9 @@ class PDFViewer(ttk.Frame):
         
         # View Mode Switch (Icon-like)
         self.is_text_mode = False
-        self.btn_mode = ttk.Button(self.toolbar, text=platform_utils.sanitize_for_linux("👁 View Text"), command=self.toggle_view_mode)
+        self.btn_mode = ttk.Button(self.toolbar, command=self.toggle_view_mode)
+        self._update_mode_button_text()
+
         self.btn_mode.pack(side="right", padx=10)
 
         # --- Main Container Stack ---
@@ -94,16 +98,25 @@ class PDFViewer(ttk.Frame):
         # Show initial
         self.canvas_frame.pack(fill="both", expand=True)
 
+    def _update_mode_button_text(self):
+        txt = "🖼 View Image" if self.is_text_mode else "👁 View Text"
+        img = render_emoji_image(txt, (MAIN_FONT, 9), "white", self.btn_mode)
+
+        if img:
+            self.btn_mode.config(image=img, text="")
+            self.btn_mode._img = img
+        else:
+            self.btn_mode.config(text=platform_utils.sanitize_for_linux(txt))
+
     def toggle_view_mode(self):
-        self.is_text_mode = not self.is_text_mode
+        self.view_mode = "image" if self.view_mode == "text" else "text"
+        self._update_mode_button_text()
         
-        if self.is_text_mode:
-            self.btn_mode.config(text=platform_utils.sanitize_for_linux("🖼 View Image"))
+        if self.view_mode == "text":
             self.canvas_frame.pack_forget()
             self.text_frame.pack(fill="both", expand=True)
             self.show_text_content()
         else:
-            self.btn_mode.config(text=platform_utils.sanitize_for_linux("👁 View Text"))
             self.text_frame.pack_forget()
             self.canvas_frame.pack(fill="both", expand=True)
             # Image is already there or needs refresh?

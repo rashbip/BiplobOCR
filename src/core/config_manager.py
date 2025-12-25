@@ -158,11 +158,12 @@ class ConfigManager:
     def t(self, key):
         lang = self.get("language", "en")
         text = TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, key)
-        try:
-            from .platform_utils import sanitize_for_linux
-            return sanitize_for_linux(text)
-        except ImportError:
-            return text
+        
+        from . import platform_utils
+        if platform_utils.IS_LINUX:
+            return platform_utils.sanitize_for_linux(text)
+        return text
+
 
 
 state = ConfigManager()
