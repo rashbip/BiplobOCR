@@ -36,6 +36,6 @@ platforms/linux/*
 !platforms/linux/*.py
 !platforms/linux/assets/
 # Keep spec files if needed, though they are generated
-# !platforms/linux/*.spec
+!platforms/linux/*.spec
 
 # Keep tracking requirements.txt and other source files
