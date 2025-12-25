@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=BiplobOCR
+Exec=BiplobOCR
+Icon=BiplobOCR
+Type=Application
+Categories=Utility;Office;
+Comment=Advanced OCR Tool
+Terminal=false

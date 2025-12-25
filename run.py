@@ -6,6 +6,9 @@ import subprocess
 # BiplobOCR is designed to run using its bundled Windows Python.
 def bootstrap():
     # Only enforce on Windows/Linux if not already bootstrapped
+    if getattr(sys, 'frozen', False):
+        return
+
     if "BIPLO_OCR_BOOTSTRAPPED" not in os.environ:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         

@@ -1,0 +1,365 @@
+"""
+Settings View - Application settings panel with data pack management.
+Extracted from app.py for better maintainability.
+"""
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
+import os
+import shutil
+
+from ...core.theme import BG_COLOR, SURFACE_COLOR, FG_COLOR, THEME_COLOR, MAIN_FONT, HEADER_FONT
+from ...core.config_manager import state as app_state
+from ...core.ocr_engine import get_available_languages, get_tessdata_dir
+from ...core import platform_utils
+from ...core.emoji_label import EmojiLabel, render_emoji_image
+
+
+
+
+
+class SettingsView(ttk.Frame):
+    """Settings panel view."""
+    
+    def __init__(self, parent, controller):
+        super().__init__(parent, padding=40)
+        self.controller = controller
+        self.avail_langs = []
+        self.build_ui()
+    
+    def _create_check(self, parent, text, var):
+        """Helper to create a checkbutton with custom font support via EmojiLabel."""
+        f = ttk.Frame(parent)
+        f.pack(anchor="w", pady=1)
+        c = ttk.Checkbutton(f, variable=var)
+        c.pack(side="left")
+        l = EmojiLabel(f, text=text, font=(MAIN_FONT, 12))
+        l.pack(side="left", padx=5)
+        # Clicking label toggles check
+        l.bind("<Button-1>", lambda e: var.set(not var.get()))
+        return f
+
+    
+    def build_ui(self):
+        """Build the settings view UI."""
+        # Create Scrollable Container
+        canvas = tk.Canvas(self, bg=BG_COLOR, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        self.settings_scroll_frame = ttk.Frame(canvas)
+        
+        self.settings_scroll_frame.bind("<Configure>", 
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        window_id = canvas.create_window((0, 0), window=self.settings_scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Ensure full width
+        canvas.bind('<Configure>', lambda e: canvas.itemconfig(window_id, width=e.width))
+        
+        # Enable Mousewheel Scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # Build UI into settings_scroll_frame
+        lbl = EmojiLabel(self.settings_scroll_frame, text=app_state.t("settings_title"), 
+                        font=(HEADER_FONT, 20, "bold"))
+        lbl.pack(anchor="w", pady=(0, 20))
+
+        
+        # Hardware Config
+        hw_group = ttk.Frame(self.settings_scroll_frame, padding=20, style="Card.TFrame")
+        hw_group.pack(fill="x", pady=10)
+        EmojiLabel(hw_group, text=app_state.t("lbl_hw_settings"), font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(0, 10))
+
+        
+        # GPU Selection
+        EmojiLabel(hw_group, text=app_state.t("lbl_dev_select"), font=(MAIN_FONT, 14)).pack(anchor="w")
+
+        gpu_vals = ["Auto"] + self.controller.available_gpus
+        self.cb_gpu = ttk.Combobox(hw_group, textvariable=self.controller.var_gpu_device, 
+                                    values=gpu_vals, state="readonly")
+        self.cb_gpu.pack(fill="x", pady=(5, 10))
+        
+        self._create_check(hw_group, app_state.t("lbl_gpu"), self.controller.var_gpu)
+        
+        # Threads
+        EmojiLabel(hw_group, text=f"{app_state.t('lbl_threads')} (Total Cores: {self.controller.cpu_count})", font=(MAIN_FONT, 14)).pack(
+            anchor="w", pady=(10, 0))
+        EmojiLabel(hw_group, text="Lower this value if your PC freezes.", 
+                  foreground="gray", font=(MAIN_FONT, 10)).pack(anchor="w")
+
+        
+        # Scale for threads
+        self.s_threads = tk.Scale(hw_group, from_=1, to=self.controller.cpu_count, orient="horizontal", 
+                                   variable=self.controller.var_cpu_threads, background=SURFACE_COLOR, 
+                                   foreground=FG_COLOR, highlightthickness=0)
+        self.s_threads.pack(fill="x", pady=5)
+        
+        # Lang
+        lang_group = ttk.Frame(self.settings_scroll_frame, padding=20, style="Card.TFrame")
+        lang_group.pack(fill="x", pady=10)
+        EmojiLabel(lang_group, text=app_state.t("lbl_lang"), font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(0, 10))
+
+        
+        # 1. Interface Language
+        EmojiLabel(lang_group, text=app_state.t("lbl_lang"), font=(MAIN_FONT, 14)).pack(anchor="w")
+
+        self.cb_lang = ttk.Combobox(lang_group, textvariable=self.controller.var_lang, 
+                                     values=["en", "bn"], state="readonly")
+        self.cb_lang.pack(fill="x", pady=(5, 15))
+        
+        # 2. OCR Language
+        self.avail_langs = get_available_languages()
+        
+        EmojiLabel(lang_group, text=app_state.t("lbl_ocr_lang"), font=(MAIN_FONT, 14)).pack(anchor="w")
+
+        self.controller.var_ocr_lang = tk.StringVar(value=app_state.get("ocr_language", "eng"))
+        
+        self.cb_ocr_lang = ttk.Combobox(lang_group, textvariable=self.controller.var_ocr_lang, 
+                                         values=self.avail_langs, state="readonly")
+        self.cb_ocr_lang.pack(fill="x", pady=5)
+        
+        # Data Packs Management
+        EmojiLabel(lang_group, text="Installed Data Packs", 
+                   font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(15, 5))
+        
+        # Scrollable Container for Packs
+        pack_container = ttk.Frame(lang_group, style="Card.TFrame", padding=2)
+
+        pack_container.pack(fill="x", ipady=5)
+        
+        self.packs_canvas = tk.Canvas(pack_container, bg=BG_COLOR, height=150, highlightthickness=0)
+        self.packs_scrollbar = ttk.Scrollbar(pack_container, orient="vertical", 
+                                              command=self.packs_canvas.yview)
+        self.packs_scroll_frame = ttk.Frame(self.packs_canvas, style="Card.TFrame")
+        
+        self.packs_scroll_frame.bind("<Configure>", 
+            lambda e: self.packs_canvas.configure(scrollregion=self.packs_canvas.bbox("all")))
+        self.packs_window = self.packs_canvas.create_window((0, 0), window=self.packs_scroll_frame, anchor="nw")
+        self.packs_canvas.configure(yscrollcommand=self.packs_scrollbar.set)
+        
+        self.packs_canvas.pack(side="left", fill="both", expand=True)
+        self.packs_scrollbar.pack(side="right", fill="y")
+        self.packs_canvas.bind('<Configure>', 
+            lambda e: self.packs_canvas.itemconfig(self.packs_window, width=e.width))
+
+        btn_add_pack = ttk.Button(lang_group, command=self.add_data_pack)
+        img_add = render_emoji_image("➕ Add Data Pack", (MAIN_FONT, 16), "white", btn_add_pack)
+        if img_add:
+            btn_add_pack.config(image=img_add, text="")
+            btn_add_pack._img = img_add
+        else:
+            btn_add_pack.config(text="➕ Add Data Pack")
+        btn_add_pack.pack(anchor="w", pady=10)
+
+
+
+        
+        self.refresh_data_packs_ui()
+        
+        # Save Trigger
+        self.cb_lang.bind("<<ComboboxSelected>>", lambda e: self.controller.save_settings_inline())
+        self.cb_ocr_lang.bind("<<ComboboxSelected>>", lambda e: self.controller.save_settings_inline())
+        self.cb_gpu.bind("<<ComboboxSelected>>", lambda e: self.controller.save_settings_inline())
+        self.s_threads.bind("<ButtonRelease-1>", lambda e: self.controller.save_settings_inline())
+        
+        # Danger Zone
+        ttk.Separator(self.settings_scroll_frame, orient="horizontal").pack(fill="x", pady=30)
+        
+        danger_group = ttk.Frame(self.settings_scroll_frame, padding=20, style="Card.TFrame")
+        danger_group.pack(fill="x", pady=(0, 20))
+        EmojiLabel(danger_group, text=app_state.t("lbl_danger_zone"), font=(MAIN_FONT, 10, "bold"), foreground="#ff5555").pack(anchor="w", pady=(0, 10))
+        
+        EmojiLabel(danger_group, text=app_state.t("lbl_factory_reset_desc"), 
+                   font=(MAIN_FONT, 12), foreground="#ff5555").pack(anchor="w")
+
+
+
+        btn_reset = ttk.Button(danger_group, style="Danger.TButton", 
+                   command=self.factory_reset)
+        img_reset = render_emoji_image("♻️ Factory Reset", (MAIN_FONT, 14), "white", btn_reset)
+        if img_reset:
+            btn_reset.config(image=img_reset, text="")
+            btn_reset._img = img_reset
+        else:
+            btn_reset.config(text="♻️ Factory Reset")
+        btn_reset.pack(anchor="w", pady=10)
+
+
+
+
+
+    def factory_reset(self):
+        """Reset application to factory defaults."""
+        print("Factory reset triggered")
+        if messagebox.askyesno("Factory Reset", "Are you sure you want to reset all settings and data?"):
+            try:
+                if os.path.exists("config.json"):
+                    os.remove("config.json")
+                if os.path.exists("history.json"):
+                    os.remove("history.json")
+                
+                messagebox.showinfo("Reset Complete", "Application will now restart.")
+                self.controller.restart_application(force=True)
+                
+            except Exception as e:
+                messagebox.showerror("Error", f"Reset failed: {e}")
+
+    def _refresh_all_language_lists(self):
+        """Refresh language lists in all views after data pack changes."""
+        # Refresh this view
+        self.refresh_data_packs_ui()
+        self.refresh_ocr_languages()
+        
+        # Refresh scan view if exists
+        if hasattr(self.controller, 'view_scan') and self.controller.view_scan:
+            try:
+                self.controller.view_scan.refresh_languages()
+            except Exception:
+                pass
+        
+        # Refresh batch view if exists
+        if hasattr(self.controller, 'view_batch') and self.controller.view_batch:
+            try:
+                self.controller.view_batch.refresh_languages()
+            except Exception:
+                pass
+
+    def refresh_ocr_languages(self):
+        """Refresh the OCR language dropdown with available data packs."""
+        self.avail_langs = get_available_languages()
+        self.cb_ocr_lang['values'] = self.avail_langs
+        
+        # If current selection is not in available, reset to first available
+        current = self.controller.var_ocr_lang.get()
+        if current not in self.avail_langs and self.avail_langs:
+            self.controller.var_ocr_lang.set(self.avail_langs[0])
+
+    def refresh_data_packs_ui(self):
+        """Refresh the data packs list UI."""
+        for w in self.packs_scroll_frame.winfo_children():
+            w.destroy()
+        
+        d = get_tessdata_dir()
+        if not os.path.exists(d):
+            return
+        
+        files = sorted([f for f in os.listdir(d) if "traineddata" in f])
+        
+        for f in files:
+            is_disabled = f.endswith(".disabled")
+            clean_name = f.replace(".disabled", "")
+            
+            row = ttk.Frame(self.packs_scroll_frame, padding=5)
+            row.pack(fill="x", pady=1)
+            
+            # Icon/Name
+            icon = "🔴" if is_disabled else "🟢"
+            lbl = EmojiLabel(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 16))
+
+
+
+
+
+            if is_disabled:
+                lbl.config(foreground="gray")
+            lbl.pack(side="left", padx=5)
+            
+            # Actions - Protect OSD
+            if clean_name == "osd.traineddata":
+                ttk.Label(row, text="(System)", font=(MAIN_FONT, 10), 
+                          foreground="gray").pack(side="right", padx=10)
+                continue
+            
+            # Create closures properly
+            def make_toggle_handler(fname, disabled):
+                def toggle_disable():
+                    src = os.path.join(d, fname)
+                    if disabled:
+                        dst = os.path.join(d, fname.replace(".disabled", ""))
+                    else:
+                        dst = os.path.join(d, fname + ".disabled")
+                    try:
+                        os.rename(src, dst)
+                        self._refresh_all_language_lists()
+                    except Exception as e:
+                        messagebox.showerror("Error", str(e))
+                return toggle_disable
+
+            def make_delete_handler(fname):
+                def delete_pack():
+                    if messagebox.askyesno("Confirm", f"Delete {fname}?"):
+                        try:
+                            os.remove(os.path.join(d, fname))
+                            self._refresh_all_language_lists()
+                        except Exception as e:
+                            messagebox.showerror("Error", str(e))
+                return delete_pack
+
+            btn_del = ttk.Button(row, width=3, 
+                                  command=make_delete_handler(f), style="Danger.TButton")
+            img_trash = render_emoji_image("🗑", (MAIN_FONT, 16), "white", btn_del)
+
+
+
+
+            if img_trash:
+                btn_del.config(image=img_trash, text="")
+                btn_del._img = img_trash
+            else:
+                btn_del.config(text="🗑️")
+
+
+
+            btn_del.pack(side="right", padx=2)
+            
+            toggle_txt = "Enable" if is_disabled else "Disable"
+            btn_toggle = ttk.Button(row, command=make_toggle_handler(f, is_disabled))
+            img_tgl = render_emoji_image(toggle_txt, (MAIN_FONT, 12), "white", btn_toggle)
+            if img_tgl:
+                btn_toggle.config(image=img_tgl, text="")
+                btn_toggle._img = img_tgl
+            else:
+                btn_toggle.config(text=toggle_txt)
+            btn_toggle.pack(side="right", padx=2)
+
+
+    def add_data_pack(self):
+        """Add a new Tesseract data pack."""
+        from ...core import platform_utils
+        f = None
+        if platform_utils.IS_LINUX:
+            f = platform_utils.linux_file_dialog(
+                title="Select Tesseract Data File",
+                initialdir=app_state.get_initial_dir(),
+                filetypes=[("Trained Data", "*.traineddata")]
+            )
+        else:
+            f = filedialog.askopenfilename(title="Select Tesseract Data File", 
+                                            filetypes=[("Trained Data", "*.traineddata")])
+        if not f:
+            return
+            
+        if platform_utils.IS_LINUX:
+             app_state.save_config({"last_open_dir": os.path.dirname(f)})
+        
+        try:
+            # Basic Validation
+            with open(f, 'rb') as tf:
+                header = tf.read(15)
+                if len(header) < 10:
+                    raise Exception("Invalid file content")
+            
+            dest = os.path.join(get_tessdata_dir(), os.path.basename(f))
+            shutil.copy(f, dest)
+            
+            messagebox.showinfo("Success", f"Installed {os.path.basename(f)}")
+            
+            # Refresh Lists
+            self._refresh_all_language_lists()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to install data pack: {e}")
