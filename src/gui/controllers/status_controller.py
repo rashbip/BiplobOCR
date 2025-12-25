@@ -92,6 +92,8 @@ class StatusController:
                 if hasattr(self.app, 'log_window') and self.app.log_window.winfo_exists() and pdf_path:
                     self.app.after(0, lambda: self.app.log_window.update_image(pdf_path, page - 1))
             
+            self._update_state(pdf_path, page)
+            
         except Exception as e: 
             pass
 
@@ -105,6 +107,8 @@ class StatusController:
                 self.app.after(0, lambda: self.app.log_window.update_image(pdf_path, page - 1))
         else:
             page = self.batch_max_seen_page
+            
+        self._update_state(pdf_path, page)
 
         self.app.global_progress.configure(maximum=total_docs * 100, value=val)
         self.app.lbl_global_status.config(
@@ -114,3 +118,16 @@ class StatusController:
     def reset_batch_page_counter(self):
         """Reset the batch page counter for a new file."""
         self.batch_max_seen_page = 0
+        
+    # State tracking for UI Restoration
+    def _update_state(self, pdf_path, page):
+        self.last_pdf = pdf_path
+        self.last_page = page
+        
+    def refresh_log_view(self):
+        """Force the log view to update with the last known state."""
+        if hasattr(self.app, 'log_window') and self.app.log_window.winfo_exists():
+            # Restore image if we have state
+            if hasattr(self, 'last_pdf') and hasattr(self, 'last_page'):
+               if self.last_pdf and self.last_page > 0:
+                   self.app.after(100, lambda: self.app.log_window.update_image(self.last_pdf, self.last_page - 1))

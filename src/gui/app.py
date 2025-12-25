@@ -320,6 +320,9 @@ class BiplobOCR(TkinterDnD.Tk):
         from .views.log_view import LogView
         self.log_window = LogView(self)
         self.log_window.protocol("WM_DELETE_WINDOW", self.close_log_view)
+        
+        # Restore state if processing is active
+        self.status_controller.refresh_log_view()
 
     def close_log_view(self):
         """Close the log view window."""

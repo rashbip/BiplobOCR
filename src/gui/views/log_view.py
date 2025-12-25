@@ -49,43 +49,62 @@ class LogView(tk.Toplevel):
         try:
             from ...core.platform_utils import to_linux_path
             linux_path = to_linux_path(pdf_path)
+            
+            # Ensure path exists
+            import os
+            if not os.path.exists(linux_path):
+                self.append_log(f"Warning: PDF path not found for preview: {linux_path}")
+                return
+
             doc = fitz.open(linux_path)
-            if page_num < 0 or page_num >= len(doc): return
+            if page_num < 0 or page_num >= len(doc):
+                doc.close()
+                return
             
             page = doc[page_num]
-            # Render at high DPI for quality downscaling
-            pix = page.get_pixmap(dpi=200) 
+            # Render at moderate DPI for speed/quality balance
+            pix = page.get_pixmap(dpi=150) 
             self.raw_image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             doc.close()
             
             self.display_image()
+            self.update_idletasks() # Force UI update
             
         except Exception as e:
-            self.append_log(f"Error rendering page preview: {e}\n")
+            self.append_log(f"Error rendering page preview: {e}")
+            import traceback
+            traceback.print_exc()
             
     def display_image(self):
         if not self.raw_image: return
         
         # Get current container size
         w = self.frame_img.winfo_width()
-        current_h = self.frame_img.winfo_height()
+        h = self.frame_img.winfo_height()
+        
+        # Fallback if window not mapped yet or too small
+        if w < 50: w = 800
+        if h < 50: h = 600
         
         # Adjust for padding/borders approx
         w = max(100, w - 20) 
-        h = max(100, current_h - 40)
+        h = max(100, h - 40)
         
-        # Calculate aspect ratio
-        img_w, img_h = self.raw_image.size
-        ratio = min(w / img_w, h / img_h)
-        
-        new_w = int(img_w * ratio)
-        new_h = int(img_h * ratio)
-        
-        # High quality resize
-        resized = self.raw_image.resize((new_w, new_h), Image.Resampling.LANCZOS)
-        
-        self.current_img = ImageTk.PhotoImage(resized)
-        self.lbl_img.configure(image=self.current_img, text="")
+        try:
+            # Calculate aspect ratio
+            img_w, img_h = self.raw_image.size
+            ratio = min(w / img_w, h / img_h)
+            
+            new_w = int(img_w * ratio)
+            new_h = int(img_h * ratio)
+            
+            # Resize
+            if new_w > 0 and new_h > 0:
+                resized = self.raw_image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                self.current_img = ImageTk.PhotoImage(resized)
+                self.lbl_img.configure(image=self.current_img, text="")
+        except Exception as e:
+            print(f"Display Image Error: {e}")
 
     def append_log(self, text):
         self.txt_log.config(state="normal")
