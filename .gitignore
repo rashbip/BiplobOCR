@@ -30,4 +30,12 @@ dist/
 src/python/temp_extract/
 src/python/*.zip
 
+# Linux Build Artifacts
+platforms/linux/*
+!platforms/linux/*.sh
+!platforms/linux/*.py
+!platforms/linux/assets/
+# Keep spec files if needed, though they are generated
+!platforms/linux/*.spec
+
 # Keep tracking requirements.txt and other source files
