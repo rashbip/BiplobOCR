@@ -9,12 +9,6 @@ build/
 # *.spec (Allowing spec files for build reproducibility)
 *.egg-info/
 
-# Virtual Environments
-.env
-.venv
-env/
-venv/
-ENV/
 
 # VS Code
 .vscode/
