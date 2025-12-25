@@ -1,12 +1,13 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, Menu
+from tkinter import ttk, messagebox, Menu, filedialog
+
 import fitz  # PyMuPDF
 from PIL import Image, ImageTk
 import math
 from ..core.theme import MAIN_FONT, HEADER_FONT
 from ..core import platform_utils
 from ..core.emoji_label import EmojiLabel, render_emoji_image
-
+from ..core.config_manager import state as app_state # Correct import
 
 
 class PDFViewer(ttk.Frame):
@@ -17,6 +18,8 @@ class PDFViewer(ttk.Frame):
         self.total_pages = 0
         self.zoom = 1.0
         self.rotation = 0
+        self.view_mode = "image" # Initialized view mode
+        self.is_text_mode = False # Initialized text mode flag
         self.image_ref = None
         self.pdf_path = None
         
@@ -37,6 +40,16 @@ class PDFViewer(ttk.Frame):
         self.lbl_filename = EmojiLabel(self.toolbar, text="No File Open", font=(MAIN_FONT, 10, "bold"))
         self.lbl_filename.pack(side="left", padx=(5, 20))
 
+        # Open File Button
+        btn_open = ttk.Button(self.toolbar, command=self.open_file)
+        # Using a direct call to the key if possible, or just the string
+        img_open = render_emoji_image("📂 " + app_state.t("btn_open_computer"), (MAIN_FONT, 10), "white", btn_open)
+        if img_open:
+            btn_open.config(image=img_open, text="")
+            btn_open._img = img_open
+        else:
+            btn_open.config(text="📂 Open")
+        btn_open.pack(side="left", padx=5)
 
         # Navigation
         btn_first = ttk.Button(self.toolbar, command=self.first_page, width=5)
@@ -147,8 +160,10 @@ class PDFViewer(ttk.Frame):
             self.btn_mode.config(text=platform_utils.sanitize_for_linux(txt))
 
     def toggle_view_mode(self):
-        self.view_mode = "image" if self.view_mode == "text" else "text"
+        self.is_text_mode = not self.is_text_mode
+        self.view_mode = "text" if self.is_text_mode else "image"
         self._update_mode_button_text()
+
         
         if self.view_mode == "text":
             self.canvas_frame.pack_forget()
@@ -214,28 +229,18 @@ class PDFViewer(ttk.Frame):
             messagebox.showerror("Error loading PDF", str(e))
 
     def update_ui_state(self):
+        self.lbl_filename.set_text(os.path.basename(self.pdf_path) if self.pdf_path else "No File Open")
         self.lbl_page.config(text=f"{self.current_page + 1} / {self.total_pages}")
         self.lbl_zoom.config(text=f"{int(self.zoom * 100)}%")
 
-    def show_page(self):
-        if not self.doc: return
-        self.canvas.delete("all")
-        
-        page = self.doc.load_page(self.current_page)
-        if self.rotation != 0:
-            page.set_rotation(self.rotation)
-            
-        mat = fitz.Matrix(self.zoom, self.zoom)
-        pix = page.get_pixmap(matrix=mat)
-        img_data = pix.tobytes("ppm")
-        
-        self.image_ref = ImageTk.PhotoImage(data=img_data)
-        
-        # Center or Top-Left? Standard is centered if smaller, topleft if larger.
-        # We'll just put it at 0,0 and let scroll region handle it.
-        self.canvas.create_image(0, 0, image=self.image_ref, anchor="nw")
-        
-        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+    def open_file(self):
+        f = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+        if f:
+            self.load_pdf(f)
+
+
+
+
 
     # Navigation
     def next_page(self):

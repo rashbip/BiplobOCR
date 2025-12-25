@@ -171,21 +171,23 @@ class SettingsView(ttk.Frame):
         
         danger_group = ttk.Frame(self.settings_scroll_frame, padding=20, style="Card.TFrame")
         danger_group.pack(fill="x", pady=(0, 20))
-        EmojiLabel(danger_group, text=app_state.t("lbl_danger_zone") or "Danger Zone", font=(MAIN_FONT, 10, "bold"), foreground="#ff5555").pack(anchor="w", pady=(0, 10))
+        EmojiLabel(danger_group, text=app_state.t("lbl_danger_zone"), font=(MAIN_FONT, 10, "bold"), foreground="#ff5555").pack(anchor="w", pady=(0, 10))
         
-        EmojiLabel(danger_group, text=app_state.t("lbl_factory_reset_desc") or "Reset application to factory defaults. This cannot be undone.", 
+        EmojiLabel(danger_group, text=app_state.t("lbl_factory_reset_desc"), 
                    font=(MAIN_FONT, 10), foreground="#ff5555").pack(anchor="w")
+
 
 
         btn_reset = ttk.Button(danger_group, style="Danger.TButton", 
                    command=self.factory_reset)
-        img_reset = render_emoji_image("⚠ Factory Reset", (MAIN_FONT, 16), "white", btn_reset)
+        img_reset = render_emoji_image("♻️ Factory Reset", (MAIN_FONT, 14), "white", btn_reset)
         if img_reset:
             btn_reset.config(image=img_reset, text="")
             btn_reset._img = img_reset
         else:
-            btn_reset.config(text="⚠ Factory Reset")
+            btn_reset.config(text="♻️ Factory Reset")
         btn_reset.pack(anchor="w", pady=10)
+
 
 
 
@@ -308,7 +310,8 @@ class SettingsView(ttk.Frame):
                 btn_del.config(image=img_trash, text="")
                 btn_del._img = img_trash
             else:
-                btn_del.config(text="🗑")
+                btn_del.config(text="🗑️")
+
 
 
             btn_del.pack(side="right", padx=2)

@@ -83,12 +83,14 @@ class BatchView(ttk.Frame):
 
         # Action Button (Start)
         self.controller.btn_start_batch = ttk.Button(self.sidebar, command=self.controller.start_batch_processing, style="Accent.TButton")
-        img_start = render_emoji_image(app_state.t("btn_start_batch", sanitize=False), (MAIN_FONT, 18), "white", self.controller.btn_start_batch)
+        # Start button often has an emoji (play icon)
+        img_start = render_emoji_image(app_state.t("btn_start_batch"), (MAIN_FONT, 18), "white", self.controller.btn_start_batch)
         if img_start:
             self.controller.btn_start_batch.config(image=img_start, text="")
             self.controller.btn_start_batch._img = img_start
         else:
-            self.controller.btn_start_batch.config(text=app_state.t("btn_start_batch", sanitize=False))
+            self.controller.btn_start_batch.config(text=app_state.t("btn_start_batch"))
+
 
 
         self.controller.btn_start_batch.pack(fill="x", pady=20)

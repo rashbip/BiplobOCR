@@ -26,7 +26,8 @@ TRANSLATIONS = {
     "en": {
         "app_title": "BiplobOCR - PDF Scanner",
         "settings_title": "Settings",
-        "btn_process": "Start OCR",
+        "btn_process": "🚀 Start OCR",
+
         "btn_cancel": "Cancel",
         "lbl_status_idle": "Ready",
         "lbl_status_processing": "Processing... Please wait.",
@@ -44,10 +45,11 @@ TRANSLATIONS = {
         "lbl_theme": "Theme",
         "msg_success": "Success! Files saved.",
         "nav_home": "🏠 Home",
-        "nav_tools": "🛠 Tools",
-        "nav_batch": "📂 Batch Process",
+        "nav_tools": "🛠️ Scan",
+        "nav_batch": "📂 Batch",
         "nav_history": "🕒 History",
         "nav_settings": "⚙️ Settings",
+
         "lbl_gpu": "Enable GPU Acceleration (Safe Mode)",
         "lbl_threads": "Max CPU Threads",
         "lbl_hw_settings": "Performance & Hardware",
@@ -69,15 +71,18 @@ TRANSLATIONS = {
         "home_recent": "Recent Activity",
         "batch_title": "Batch Processing",
         "batch_desc": "Process multiple documents automatically.",
-        "btn_add_files": "➕ Add Files",
-        "btn_clear_list": "🗑 Clear List",
-        "lbl_batch_opts": "Batch Options",
-        "btn_start_batch": "▶ Start Batch"
+        "btn_start_batch": "▶️ Start Batch",
+
+        "btn_open_computer": "📂 Open from Computer",
+        "lbl_danger_zone": "Danger Zone",
+        "lbl_factory_reset_desc": "Reset application to factory defaults. This cannot be undone."
     },
+
     "bn": {
         "app_title": "BiplobOCR - PDF স্ক্যানার",
         "settings_title": "সেটিংস",
-        "btn_process": "OCR শুরু করুন",
+        "btn_process": "🚀 OCR শুরু করুন",
+
         "btn_cancel": "বাতিল",
         "lbl_status_idle": "প্রস্তুত",
         "lbl_status_processing": "প্রসেসিং চলছে... অপেক্ষা করুন",
@@ -96,10 +101,11 @@ TRANSLATIONS = {
         "lbl_theme": "থিম",
         "msg_success": "সফল! ফাইল সংরক্ষণ করা হয়েছে।",
         "nav_home": "🏠 হোম",
-        "nav_tools": "🛠 টুলস",
-        "nav_batch": "📂 ব্যাচ প্রসেস",
-        "nav_history": "🕒 ইতিহাস",
+        "nav_tools": "🛠️ স্ক্যান",
+        "nav_batch": "📂 ব্যাচ",
+        "nav_history": "🕒 হিস্টোরি",
         "nav_settings": "⚙️ সেটিংস",
+
         "lbl_gpu": "GPU এক্সিলারেশন চালু করুন (নিরাপদ মোড)",
         "lbl_threads": "সর্বোচ্চ CPU থ্রেড",
         "lbl_hw_settings": "হার্ডওয়্যার ও পারফরম্যান্স",
@@ -124,7 +130,7 @@ TRANSLATIONS = {
         "btn_add_files": "➕ ফাইল যোগ করুন",
         "btn_clear_list": "🗑 তালিকা পরিষ্কার করুন",
         "lbl_batch_opts": "ব্যাচ অপশন",
-        "btn_start_batch": "▶ ব্যাচ শুরু করুন"
+        "btn_start_batch": "▶️ ব্যাচ শুরু করুন"
     }
 }
 

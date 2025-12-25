@@ -129,13 +129,14 @@ class HistoryView(ttk.Frame):
                 messagebox.showerror("Error", "Output file not found (Moved/Deleted).")
 
         btn_out = ttk.Button(actions, command=open_out)
-        img_out = render_emoji_image("👁 View", (MAIN_FONT, 16), "white", btn_out)
+        img_out = render_emoji_image("👁 View", (MAIN_FONT, 12), "white", btn_out)
         if img_out:
             btn_out.config(image=img_out, text="")
             btn_out._img = img_out
         else:
             btn_out.config(text="👁 View")
         btn_out.pack(side="left", padx=2)
+
 
 
 
@@ -151,13 +152,14 @@ class HistoryView(ttk.Frame):
                 self.controller.view_home.refresh_recent_docs()
 
         btn_del = ttk.Button(actions, style="Danger.TButton", command=delete_me)
-        img_del = render_emoji_image("🗑 Del", (MAIN_FONT, 16), "white", btn_del)
+        img_del = render_emoji_image("🗑", (MAIN_FONT, 12), "white", btn_del)
         if img_del:
             btn_del.config(image=img_del, text="")
             btn_del._img = img_del
         else:
-            btn_del.config(text="🗑 Del")
+            btn_del.config(text="🗑")
         btn_del.pack(side="left", padx=2)
+
 
 
 

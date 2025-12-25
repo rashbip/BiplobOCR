@@ -47,13 +47,14 @@ class HomeView(ttk.Frame):
 
 
         btn_select = ttk.Button(c1_inner, text="", style="Accent.TButton", command=self.controller.open_pdf_from_home)
-        img_sel = render_emoji_image(app_state.t("btn_select_computer"), (MAIN_FONT, 16), "white", btn_select)
+        img_sel = render_emoji_image(app_state.t("btn_open_computer"), (MAIN_FONT, 16), "white", btn_select)
         if img_sel:
             btn_select.config(image=img_sel)
             btn_select._img = img_sel
         else:
-            btn_select.config(text=app_state.t("btn_select_computer"))
+            btn_select.config(text=app_state.t("btn_open_computer"))
         btn_select.pack(pady=20, ipadx=10, ipady=5)
+
 
         
         # Card 2: Batch Process
@@ -158,13 +159,14 @@ class HomeView(ttk.Frame):
                 messagebox.showerror("Error", "Output file not found.")
 
         btn_out = ttk.Button(actions, command=open_out)
-        img_out = render_emoji_image("👁 View", (MAIN_FONT, 12), "white", btn_out)
+        img_out = render_emoji_image("👁️ View", (MAIN_FONT, 12), "white", btn_out)
         if img_out:
             btn_out.config(image=img_out, text="")
             btn_out._img = img_out
         else:
-            btn_out.config(text="👁 View")
+            btn_out.config(text="👁️ View")
         btn_out.pack(side="left", padx=2)
+
         
         if not output:
             btn_out.config(state="disabled")
@@ -178,10 +180,11 @@ class HomeView(ttk.Frame):
                 self.refresh_recent_docs()
 
         btn_del = ttk.Button(actions, style="Danger.TButton", command=delete_me)
-        img_del = render_emoji_image("🗑", (MAIN_FONT, 12), "white", btn_del)
+        img_del = render_emoji_image("🗑️", (MAIN_FONT, 12), "white", btn_del)
         if img_del:
             btn_del.config(image=img_del, text="")
             btn_del._img = img_del
         else:
-            btn_del.config(text="🗑")
+            btn_del.config(text="🗑️")
+
         btn_del.pack(side="left", padx=2)

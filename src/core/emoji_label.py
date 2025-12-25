@@ -50,12 +50,19 @@ def render_emoji_image(text, font_spec=("DejaVu Sans", 12), fg="white", master=N
         h = int(size * 1.8) + 10 # More height for comfort
         
         img = Image.new("RGBA", (w, h), (0,0,0,0))
+        # Use Noto Color Emoji if available
+        emoji_fpath = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
         with Pilmoji(img) as pilmoji:
-            pilmoji.text((10, 5), text, font=pil_font, fill=fg)
+            pilmoji.text((10, 8), text, font=pil_font, fill=fg, 
+                         emoji_font_res=emoji_fpath if os.path.exists(emoji_fpath) else None)
 
         
         bbox = img.getbbox()
-        if bbox: img = img.crop(bbox)
+        if bbox:
+            # Add a bit of padding to the bbox to prevent clipping
+            img = img.crop((bbox[0]-5, bbox[1]-5, bbox[2]+5, bbox[3]+5))
+
+
         
         return ImageTk.PhotoImage(img, master=master)
     except Exception as e:
@@ -143,18 +150,26 @@ class EmojiLabel(ttk.Label):
             has_emoji = any(ord(c) > 0x2000 for c in text)
             
             if has_emoji:
+                # Use Noto Color Emoji if available
+                emoji_fpath = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
                 with Pilmoji(img) as pilmoji:
-                    pilmoji.text((5, 5), text, font=pil_font, fill=fg)
+                    # Y offset for emojis to align with text
+                    pilmoji.text((5, 10), text, font=pil_font, fill=fg,
+                                 emoji_font_res=emoji_fpath if os.path.exists(emoji_fpath) else None)
             else:
                 draw = ImageDraw.Draw(img)
-                draw.text((5, 5), text, font=pil_font, fill=fg)
+                draw.text((5, 10), text, font=pil_font, fill=fg)
+
 
             # Crop and set
             bbox = img.getbbox()
-            if bbox: img = img.crop(bbox)
+            if bbox:
+                # Add a bit of padding to prevent clipping
+                img = img.crop((bbox[0]-5, bbox[1]-5, bbox[2]+5, bbox[3]+5))
             
             self._image_ref = ImageTk.PhotoImage(img)
             super().config(image=self._image_ref, text="")
+
         except Exception as e:
             import logging
             logging.error(f"EmojiLabel error: {e}")

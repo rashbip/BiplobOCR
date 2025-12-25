@@ -223,10 +223,7 @@ class BiplobOCR(TkinterDnD.Tk):
         self.btn_cancel_global = ttk.Button(self.status_bar, 
                                              command=self.processing_controller.cancel_processing, 
                                              style="Danger.TButton")
-        img_stop = render_emoji_image("🟥 STOP", (MAIN_FONT, 14), "white", self.btn_cancel_global)
-
-
-
+        img_stop = render_emoji_image("🟥 STOP", (MAIN_FONT, 12), "white", self.btn_cancel_global)
         if img_stop:
             self.btn_cancel_global.config(image=img_stop, text="")
             self.btn_cancel_global._img = img_stop # Keep reference
@@ -234,16 +231,18 @@ class BiplobOCR(TkinterDnD.Tk):
             self.btn_cancel_global.config(text="🟥 STOP")
 
 
+
         self.btn_cancel_global.pack(side="right", padx=10)
         
         self.btn_show_log = ttk.Button(self.status_bar, 
                                          command=self.open_log_view, style="TButton")
-        img_log = render_emoji_image("👁 See procces", (MAIN_FONT, 14), "white", self.btn_show_log)
+        img_log = render_emoji_image("👁 See process", (MAIN_FONT, 12), "white", self.btn_show_log)
         if img_log:
             self.btn_show_log.config(image=img_log, text="")
             self.btn_show_log._img = img_log
         else:
-            self.btn_show_log.config(text="👁 See procces")
+            self.btn_show_log.config(text="👁 See process")
+
 
 
 
