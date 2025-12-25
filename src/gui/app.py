@@ -341,9 +341,24 @@ class BiplobOCR(TkinterDnD.Tk):
 
     def open_pdf(self):
         """Open a PDF file."""
-        pdf = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
+        import sys
+        from ..core import platform_utils
+        
+        pdf = None
+        if platform_utils.IS_LINUX:
+            pdf = platform_utils.linux_file_dialog(
+                title="Select PDF",
+                initialdir=app_state.get_initial_dir(),
+                filetypes=[("PDF files", "*.pdf")]
+            )
+        else:
+            pdf = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
+
         if not pdf:
             return
+            
+        if platform_utils.IS_LINUX:
+            app_state.save_config({"last_open_dir": os.path.dirname(pdf)})
         self.current_pdf_path = pdf
         password = None
         try: 
@@ -423,8 +438,21 @@ class BiplobOCR(TkinterDnD.Tk):
                    background=SURFACE_COLOR, foreground="#4CAF50").pack(pady=20)
         
         def save_pdf():
-            f = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])
+            from ..core import platform_utils
+            f = None
+            if platform_utils.IS_LINUX:
+                f = platform_utils.linux_file_dialog(
+                    title="Save PDF",
+                    initialdir=app_state.get_initial_dir(),
+                    save=True,
+                    filetypes=[("PDF", "*.pdf")]
+                )
+            else:
+                f = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])
+
             if f:
+                if platform_utils.IS_LINUX:
+                    app_state.save_config({"last_open_dir": os.path.dirname(f)})
                 try:
                     shutil.copy(temp_out, f)
                     messagebox.showinfo("Saved", "PDF Saved!")
@@ -434,8 +462,21 @@ class BiplobOCR(TkinterDnD.Tk):
                     messagebox.showerror("Error", f"Save failed: {e}")
         
         def save_txt():
-            f = filedialog.asksaveasfilename(defaultextension=".txt")
+            from ..core import platform_utils
+            f = None
+            if platform_utils.IS_LINUX:
+                f = platform_utils.linux_file_dialog(
+                    title="Save Text",
+                    initialdir=app_state.get_initial_dir(),
+                    save=True,
+                    filetypes=[("Text", "*.txt")]
+                )
+            else:
+                f = filedialog.asksaveasfilename(defaultextension=".txt")
+
             if f:
+                if platform_utils.IS_LINUX:
+                    app_state.save_config({"last_open_dir": os.path.dirname(f)})
                 shutil.copy(sidecar, f)
                 messagebox.showinfo("Saved", "Text Saved!")
         

@@ -196,9 +196,21 @@ class ProcessingController:
             messagebox.showwarning("Empty", "Please add files to process.")
             return
             
-        out_dir = filedialog.askdirectory(title="Select Output Folder")
+        from ...core import platform_utils
+        out_dir = None
+        if platform_utils.IS_LINUX:
+            out_dir = platform_utils.linux_directory_dialog(
+                title="Select Output Folder",
+                initialdir=app_state.get_initial_dir()
+            )
+        else:
+            out_dir = filedialog.askdirectory(title="Select Output Folder")
+
         if not out_dir:
             return
+            
+        if platform_utils.IS_LINUX:
+            app_state.save_config({"last_open_dir": out_dir})
         
         self.app.save_settings_inline()
 
@@ -212,9 +224,23 @@ class ProcessingController:
 
     def add_batch_files(self):
         """Add files to the batch queue."""
-        files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
+        from ...core import platform_utils
+        files = None
+        if platform_utils.IS_LINUX:
+            files = platform_utils.linux_file_dialog(
+                title="Select PDF Files",
+                initialdir=app_state.get_initial_dir(),
+                multiple=True,
+                filetypes=[("PDF files", "*.pdf")]
+            )
+        else:
+            files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
+
         if not files:
             return
+            
+        if platform_utils.IS_LINUX:
+            app_state.save_config({"last_open_dir": os.path.dirname(files[0])})
         if not hasattr(self.app, 'batch_files'):
             self.app.batch_files = []
         for f in files:
@@ -330,7 +356,7 @@ class ProcessingController:
                 if self.stop_flag:
                     raise Exception("Process Cancelled")
                      
-                from ..core import platform_utils
+                from ...core import platform_utils
                 self.app.after(0, lambda id=item_id: self.app.batch_tree.set(id, "Status", platform_utils.sanitize_for_linux("✅ Done")))
 
                 history.add_entry(fname, "Batch Success", "N/A", source_path=fpath, output_path=out_path)

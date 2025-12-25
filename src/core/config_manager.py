@@ -19,7 +19,8 @@ DEFAULT_CONFIG = {
     "gpu_device": "Auto",
     "max_cpu_threads": 2,
     "rasterize": False,
-    "dpi": 0
+    "dpi": 0,
+    "last_open_dir": ""
 }
 
 TRANSLATIONS = {
@@ -166,6 +167,17 @@ class ConfigManager:
     
     def set_option(self, key, value):
         self.config[key] = value
+
+    def get_initial_dir(self):
+        last = self.get("last_open_dir")
+        if last and os.path.exists(last):
+            return last
+        
+        # Fallback to Documents
+        docs = os.path.join(os.path.expanduser("~"), "Documents")
+        if os.path.exists(docs):
+            return docs
+        return os.path.expanduser("~")
 
     def t(self, key, sanitize=True):
         lang = self.get("language", "en")

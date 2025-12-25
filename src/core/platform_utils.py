@@ -255,3 +255,52 @@ def get_subprocess_creation_flags():
         # On POSIX we handle start_new_session=True in Popen arguments usually,
         # but if we need a flag value, we can return 0
         return 0 
+
+def linux_file_dialog(title="Select File", initialdir=None, multiple=False, save=False, filetypes=None):
+    """Uses zenity to show a native file dialog on Linux to avoid Tkinter render bugs."""
+    if not IS_LINUX: return None
+    
+    cmd = ["zenity", "--file-selection", "--title", title]
+    if initialdir:
+        cmd.extend(["--filename", os.path.join(initialdir, "")])
+    if multiple:
+        cmd.append("--multiple")
+        cmd.append("--separator=|")
+    if save:
+        cmd.append("--save")
+        cmd.append("--confirm-overwrite")
+    
+    if filetypes:
+        for ft in filetypes:
+            if isinstance(ft, tuple) and len(ft) >= 2:
+                name, ext = ft
+                # Zenity filter format: --file-filter="Name | *.ext *.ext2"
+                # Convert list of extensions to space separated if needed, but our filetypes are usually strings like "*.pdf"
+                cmd.append(f'--file-filter={name} | {ext}')
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            out = result.stdout.strip()
+            if multiple:
+                return out.split("|")
+            return out
+    except Exception as e:
+        logging.error(f"Zenity dialog error: {e}")
+    return None
+
+def linux_directory_dialog(title="Select Folder", initialdir=None):
+    """Uses zenity for native directory selection on Linux."""
+    if not IS_LINUX: return None
+    
+    cmd = ["zenity", "--file-selection", "--directory", "--title", title]
+    if initialdir:
+        cmd.extend(["--filename", os.path.join(initialdir, "")])
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception as e:
+        logging.error(f"Zenity directory dialog error: {e}")
+    return None

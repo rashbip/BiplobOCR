@@ -329,10 +329,22 @@ class SettingsView(ttk.Frame):
 
     def add_data_pack(self):
         """Add a new Tesseract data pack."""
-        f = filedialog.askopenfilename(title="Select Tesseract Data File", 
-                                        filetypes=[("Trained Data", "*.traineddata")])
+        from ...core import platform_utils
+        f = None
+        if platform_utils.IS_LINUX:
+            f = platform_utils.linux_file_dialog(
+                title="Select Tesseract Data File",
+                initialdir=app_state.get_initial_dir(),
+                filetypes=[("Trained Data", "*.traineddata")]
+            )
+        else:
+            f = filedialog.askopenfilename(title="Select Tesseract Data File", 
+                                            filetypes=[("Trained Data", "*.traineddata")])
         if not f:
             return
+            
+        if platform_utils.IS_LINUX:
+             app_state.save_config({"last_open_dir": os.path.dirname(f)})
         
         try:
             # Basic Validation

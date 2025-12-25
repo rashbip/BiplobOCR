@@ -235,8 +235,19 @@ class PDFViewer(ttk.Frame):
         self.lbl_zoom.config(text=f"{int(self.zoom * 100)}%")
 
     def open_file(self):
-        f = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+        f = None
+        if platform_utils.IS_LINUX:
+            f = platform_utils.linux_file_dialog(
+                title="Select PDF",
+                initialdir=app_state.get_initial_dir(),
+                filetypes=[("PDF Files", "*.pdf")]
+            )
+        else:
+            f = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+
         if f:
+            if platform_utils.IS_LINUX:
+                app_state.save_config({"last_open_dir": os.path.dirname(f)})
             self.load_pdf(f)
 
 
