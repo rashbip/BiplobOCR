@@ -342,7 +342,6 @@ class BiplobOCR(TkinterDnD.Tk):
     def open_pdf(self):
         """Open a PDF file."""
         import sys
-        from ..core import platform_utils
         
         pdf = None
         if platform_utils.IS_LINUX:
@@ -438,7 +437,6 @@ class BiplobOCR(TkinterDnD.Tk):
                    background=SURFACE_COLOR, foreground="#4CAF50").pack(pady=20)
         
         def save_pdf():
-            from ..core import platform_utils
             f = None
             if platform_utils.IS_LINUX:
                 f = platform_utils.linux_file_dialog(
@@ -462,7 +460,6 @@ class BiplobOCR(TkinterDnD.Tk):
                     messagebox.showerror("Error", f"Save failed: {e}")
         
         def save_txt():
-            from ..core import platform_utils
             f = None
             if platform_utils.IS_LINUX:
                 f = platform_utils.linux_file_dialog(
