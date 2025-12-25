@@ -21,6 +21,19 @@ class BatchView(ttk.Frame):
         if event.data:
             self.controller.add_dropped_batch_files(event.data)
 
+    def _create_check(self, parent, text, var):
+        """Helper to create a checkbutton with custom font support via EmojiLabel."""
+        f = ttk.Frame(parent)
+        f.pack(anchor="w", pady=1)
+        c = ttk.Checkbutton(f, variable=var)
+        c.pack(side="left")
+        l = EmojiLabel(f, text=text, font=(MAIN_FONT, 12))
+        l.pack(side="left", padx=5)
+        # Clicking label toggles check
+        l.bind("<Button-1>", lambda e: var.set(not var.get()))
+        return f
+
+
     def build_ui(self):
         # Main layout: Sidebar (Options) + Main (List)
         paned = ttk.PanedWindow(self, orient="horizontal")
@@ -34,29 +47,35 @@ class BatchView(ttk.Frame):
 
         
         # Options Group
-        opt_frame = ttk.LabelFrame(self.sidebar, text=app_state.t("grp_options"), padding=10)
-        opt_frame.pack(fill="x", pady=5)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_deskew"), variable=self.controller.var_deskew).pack(anchor="w", pady=2)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_clean"), variable=self.controller.var_clean).pack(anchor="w", pady=2)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_rotate"), variable=self.controller.var_rotate).pack(anchor="w", pady=2)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_force"), variable=self.controller.var_force).pack(anchor="w", pady=2)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_rasterize"), variable=self.controller.var_rasterize).pack(anchor="w", pady=2)
+        opt_group = ttk.Frame(self.sidebar, padding=10, style="Card.TFrame")
+        opt_group.pack(fill="x", pady=5)
+        EmojiLabel(opt_group, text=app_state.t("grp_options"), font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(0, 5))
         
-        dpi_frame = ttk.Frame(opt_frame)
+        self._create_check(opt_group, app_state.t("opt_deskew"), self.controller.var_deskew)
+        self._create_check(opt_group, app_state.t("opt_clean"), self.controller.var_clean)
+        self._create_check(opt_group, app_state.t("opt_rotate"), self.controller.var_rotate)
+        self._create_check(opt_group, app_state.t("opt_force"), self.controller.var_force)
+        self._create_check(opt_group, app_state.t("opt_rasterize"), self.controller.var_rasterize)
+
+        
+        dpi_frame = ttk.Frame(opt_group)
         dpi_frame.pack(fill="x", pady=5)
         EmojiLabel(dpi_frame, text=app_state.t("lbl_dpi"), font=(MAIN_FONT, 14)).pack(side="left")
         ttk.Entry(dpi_frame, textvariable=self.controller.var_dpi, width=8).pack(side="right")
 
-        EmojiLabel(opt_frame, text=app_state.t("lbl_optimize"), font=(MAIN_FONT, 14)).pack(anchor="w", pady=(10, 2))
+        EmojiLabel(opt_group, text=app_state.t("lbl_optimize"), font=(MAIN_FONT, 14)).pack(anchor="w", pady=(10, 2))
 
-        ttk.Combobox(opt_frame, textvariable=self.controller.var_optimize, values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
+        ttk.Combobox(opt_group, textvariable=self.controller.var_optimize, values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
+
 
         # Languages Group
-        self.lang_frame = ttk.LabelFrame(self.sidebar, text="Processing Languages", padding=10)
-        self.lang_frame.pack(fill="x", pady=15)
+        lang_group = ttk.Frame(self.sidebar, padding=10, style="Card.TFrame")
+        lang_group.pack(fill="x", pady=15)
+        EmojiLabel(lang_group, text="Processing Languages", font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(0, 5))
         
         # Container for dynamic language list
-        self.lang_container = ttk.Frame(self.lang_frame)
+        self.lang_container = ttk.Frame(lang_group)
+
         self.lang_container.pack(fill="x", expand=True)
         
         # Build initial language list
@@ -98,12 +117,13 @@ class BatchView(ttk.Frame):
         btn_add.pack(side="left", padx=(0, 5))
 
         btn_clear = ttk.Button(toolbar, command=self.controller.clear_batch_files)
-        img_clear = render_emoji_image(app_state.t("btn_clear_list", sanitize=False), (MAIN_FONT, 18), "white", btn_clear)
+        img_clear = render_emoji_image(app_state.t("btn_clear_list"), (MAIN_FONT, 18), "white", btn_clear)
         if img_clear:
             btn_clear.config(image=img_clear, text="")
             btn_clear._img = img_clear
         else:
-            btn_clear.config(text=app_state.t("btn_clear_list", sanitize=False))
+            btn_clear.config(text=app_state.t("btn_clear_list"))
+
         btn_clear.pack(side="left", padx=(0, 5))
 
 
@@ -143,8 +163,9 @@ class BatchView(ttk.Frame):
         self.controller.batch_lang_vars = {}
         for l in avail:
             var = tk.BooleanVar(value=(l in last_used))
-            ttk.Checkbutton(lf, text=l, variable=var).pack(anchor="w")
+            self._create_check(lf, l, var)
             self.controller.batch_lang_vars[l] = var
+
 
     def refresh_languages(self):
         """Refresh the language list from available data packs."""

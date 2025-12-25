@@ -26,6 +26,19 @@ class SettingsView(ttk.Frame):
         self.avail_langs = []
         self.build_ui()
     
+    def _create_check(self, parent, text, var):
+        """Helper to create a checkbutton with custom font support via EmojiLabel."""
+        f = ttk.Frame(parent)
+        f.pack(anchor="w", pady=1)
+        c = ttk.Checkbutton(f, variable=var)
+        c.pack(side="left")
+        l = EmojiLabel(f, text=text, font=(MAIN_FONT, 12))
+        l.pack(side="left", padx=5)
+        # Clicking label toggles check
+        l.bind("<Button-1>", lambda e: var.set(not var.get()))
+        return f
+
+    
     def build_ui(self):
         """Build the settings view UI."""
         # Create Scrollable Container
@@ -57,61 +70,65 @@ class SettingsView(ttk.Frame):
 
         
         # Hardware Config
-        f_hw = ttk.LabelFrame(self.settings_scroll_frame, text=app_state.t("lbl_hw_settings"), padding=20)
-        f_hw.pack(fill="x", pady=10)
+        hw_group = ttk.Frame(self.settings_scroll_frame, padding=20, style="Card.TFrame")
+        hw_group.pack(fill="x", pady=10)
+        EmojiLabel(hw_group, text=app_state.t("lbl_hw_settings"), font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(0, 10))
+
         
         # GPU Selection
-        EmojiLabel(f_hw, text=app_state.t("lbl_dev_select"), font=(MAIN_FONT, 14)).pack(anchor="w")
+        EmojiLabel(hw_group, text=app_state.t("lbl_dev_select"), font=(MAIN_FONT, 14)).pack(anchor="w")
 
         gpu_vals = ["Auto"] + self.controller.available_gpus
-        self.cb_gpu = ttk.Combobox(f_hw, textvariable=self.controller.var_gpu_device, 
+        self.cb_gpu = ttk.Combobox(hw_group, textvariable=self.controller.var_gpu_device, 
                                     values=gpu_vals, state="readonly")
         self.cb_gpu.pack(fill="x", pady=(5, 10))
         
-        ttk.Checkbutton(f_hw, text=app_state.t("lbl_gpu"), 
-                        variable=self.controller.var_gpu).pack(anchor="w")
+        self._create_check(hw_group, app_state.t("lbl_gpu"), self.controller.var_gpu)
         
         # Threads
-        EmojiLabel(f_hw, text=f"{app_state.t('lbl_threads')} (Total Cores: {self.controller.cpu_count})", font=(MAIN_FONT, 14)).pack(
+        EmojiLabel(hw_group, text=f"{app_state.t('lbl_threads')} (Total Cores: {self.controller.cpu_count})", font=(MAIN_FONT, 14)).pack(
             anchor="w", pady=(10, 0))
-        EmojiLabel(f_hw, text="Lower this value if your PC freezes.", 
+        EmojiLabel(hw_group, text="Lower this value if your PC freezes.", 
                   foreground="gray", font=(MAIN_FONT, 8)).pack(anchor="w")
 
         
         # Scale for threads
-        self.s_threads = tk.Scale(f_hw, from_=1, to=self.controller.cpu_count, orient="horizontal", 
+        self.s_threads = tk.Scale(hw_group, from_=1, to=self.controller.cpu_count, orient="horizontal", 
                                    variable=self.controller.var_cpu_threads, background=SURFACE_COLOR, 
                                    foreground=FG_COLOR, highlightthickness=0)
         self.s_threads.pack(fill="x", pady=5)
         
         # Lang
-        f_lang = ttk.LabelFrame(self.settings_scroll_frame, text=app_state.t("lbl_lang"), padding=20)
-        f_lang.pack(fill="x", pady=10)
+        lang_group = ttk.Frame(self.settings_scroll_frame, padding=20, style="Card.TFrame")
+        lang_group.pack(fill="x", pady=10)
+        EmojiLabel(lang_group, text=app_state.t("lbl_lang"), font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(0, 10))
+
         
         # 1. Interface Language
-        EmojiLabel(f_lang, text=app_state.t("lbl_lang"), font=(MAIN_FONT, 14)).pack(anchor="w")
+        EmojiLabel(lang_group, text=app_state.t("lbl_lang"), font=(MAIN_FONT, 14)).pack(anchor="w")
 
-        self.cb_lang = ttk.Combobox(f_lang, textvariable=self.controller.var_lang, 
+        self.cb_lang = ttk.Combobox(lang_group, textvariable=self.controller.var_lang, 
                                      values=["en", "bn"], state="readonly")
         self.cb_lang.pack(fill="x", pady=(5, 15))
         
         # 2. OCR Language
         self.avail_langs = get_available_languages()
         
-        EmojiLabel(f_lang, text=app_state.t("lbl_ocr_lang"), font=(MAIN_FONT, 14)).pack(anchor="w")
+        EmojiLabel(lang_group, text=app_state.t("lbl_ocr_lang"), font=(MAIN_FONT, 14)).pack(anchor="w")
 
         self.controller.var_ocr_lang = tk.StringVar(value=app_state.get("ocr_language", "eng"))
         
-        self.cb_ocr_lang = ttk.Combobox(f_lang, textvariable=self.controller.var_ocr_lang, 
+        self.cb_ocr_lang = ttk.Combobox(lang_group, textvariable=self.controller.var_ocr_lang, 
                                          values=self.avail_langs, state="readonly")
         self.cb_ocr_lang.pack(fill="x", pady=5)
         
         # Data Packs Management
-        EmojiLabel(f_lang, text="Installed Data Packs", 
+        EmojiLabel(lang_group, text="Installed Data Packs", 
                    font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(15, 5))
         
         # Scrollable Container for Packs
-        pack_container = ttk.Frame(f_lang, style="Card.TFrame", padding=2)
+        pack_container = ttk.Frame(lang_group, style="Card.TFrame", padding=2)
+
         pack_container.pack(fill="x", ipady=5)
         
         self.packs_canvas = tk.Canvas(pack_container, bg=BG_COLOR, height=150, highlightthickness=0)
@@ -129,7 +146,7 @@ class SettingsView(ttk.Frame):
         self.packs_canvas.bind('<Configure>', 
             lambda e: self.packs_canvas.itemconfig(self.packs_window, width=e.width))
 
-        btn_add_pack = ttk.Button(f_lang, command=self.add_data_pack)
+        btn_add_pack = ttk.Button(lang_group, command=self.add_data_pack)
         img_add = render_emoji_image("➕ Add Data Pack", (MAIN_FONT, 16), "white", btn_add_pack)
         if img_add:
             btn_add_pack.config(image=img_add, text="")
@@ -137,6 +154,7 @@ class SettingsView(ttk.Frame):
         else:
             btn_add_pack.config(text="➕ Add Data Pack")
         btn_add_pack.pack(anchor="w", pady=10)
+
 
 
         
@@ -151,13 +169,15 @@ class SettingsView(ttk.Frame):
         # Danger Zone
         ttk.Separator(self.settings_scroll_frame, orient="horizontal").pack(fill="x", pady=30)
         
-        f_danger = ttk.LabelFrame(self.settings_scroll_frame, text="Danger Zone", padding=20)
-        f_danger.pack(fill="x", pady=(0, 20))
+        danger_group = ttk.Frame(self.settings_scroll_frame, padding=20, style="Card.TFrame")
+        danger_group.pack(fill="x", pady=(0, 20))
+        EmojiLabel(danger_group, text=app_state.t("lbl_danger_zone") or "Danger Zone", font=(MAIN_FONT, 10, "bold"), foreground="#ff5555").pack(anchor="w", pady=(0, 10))
         
-        EmojiLabel(f_danger, text="Reset application to factory defaults. This cannot be undone.", 
+        EmojiLabel(danger_group, text=app_state.t("lbl_factory_reset_desc") or "Reset application to factory defaults. This cannot be undone.", 
                    font=(MAIN_FONT, 10), foreground="#ff5555").pack(anchor="w")
 
-        btn_reset = ttk.Button(f_danger, style="Danger.TButton", 
+
+        btn_reset = ttk.Button(danger_group, style="Danger.TButton", 
                    command=self.factory_reset)
         img_reset = render_emoji_image("⚠ Factory Reset", (MAIN_FONT, 16), "white", btn_reset)
         if img_reset:
@@ -293,9 +313,16 @@ class SettingsView(ttk.Frame):
 
             btn_del.pack(side="right", padx=2)
             
-            btn_toggle = ttk.Button(row, text="Enable" if is_disabled else "Disable", 
-                                     width=8, command=make_toggle_handler(f, is_disabled))
+            toggle_txt = "Enable" if is_disabled else "Disable"
+            btn_toggle = ttk.Button(row, command=make_toggle_handler(f, is_disabled))
+            img_tgl = render_emoji_image(toggle_txt, (MAIN_FONT, 12), "white", btn_toggle)
+            if img_tgl:
+                btn_toggle.config(image=img_tgl, text="")
+                btn_toggle._img = img_tgl
+            else:
+                btn_toggle.config(text=toggle_txt)
             btn_toggle.pack(side="right", padx=2)
+
 
     def add_data_pack(self):
         """Add a new Tesseract data pack."""

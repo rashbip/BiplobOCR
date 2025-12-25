@@ -46,7 +46,15 @@ class HomeView(ttk.Frame):
 
 
 
-        ttk.Button(c1_inner, text=app_state.t("btn_select_computer"), style="Accent.TButton", command=self.controller.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
+        btn_select = ttk.Button(c1_inner, text="", style="Accent.TButton", command=self.controller.open_pdf_from_home)
+        img_sel = render_emoji_image(app_state.t("btn_select_computer"), (MAIN_FONT, 16), "white", btn_select)
+        if img_sel:
+            btn_select.config(image=img_sel)
+            btn_select._img = img_sel
+        else:
+            btn_select.config(text=app_state.t("btn_select_computer"))
+        btn_select.pack(pady=20, ipadx=10, ipady=5)
+
         
         # Card 2: Batch Process
         card2 = ttk.Frame(cards_frame, style="Card.TFrame", padding=1)
@@ -61,7 +69,15 @@ class HomeView(ttk.Frame):
 
 
         
-        ttk.Button(c2_inner, text="Open Batch Tool", style="TButton", command=lambda: self.controller.switch_tab("batch")).pack(pady=20, ipadx=10, ipady=5)
+        btn_batch_tool = ttk.Button(c2_inner, text="", style="TButton", command=lambda: self.controller.switch_tab("batch"))
+        img_batch = render_emoji_image("Open Batch Tool", (MAIN_FONT, 16), "white", btn_batch_tool)
+        if img_batch:
+            btn_batch_tool.config(image=img_batch)
+            btn_batch_tool._img = img_batch
+        else:
+            btn_batch_tool.config(text="Open Batch Tool")
+        btn_batch_tool.pack(pady=20, ipadx=10, ipady=5)
+
         # The following line was incorrectly indented in the instruction. Assuming it was meant to be removed or part of the lambda.
         # self.controller.add_batch_files() 
         # The instruction also included the old button, which is now replaced by the above.
@@ -124,12 +140,12 @@ class HomeView(ttk.Frame):
                 messagebox.showerror("Error", "Source file not found.")
 
         btn_src = ttk.Button(actions, command=open_src)
-        img_src = render_emoji_image("📄 Src", (MAIN_FONT, 8), "white", btn_src)
+        img_src = render_emoji_image("📂 Src", (MAIN_FONT, 12), "white", btn_src)
         if img_src:
             btn_src.config(image=img_src, text="")
             btn_src._img = img_src
         else:
-            btn_src.config(text=platform_utils.sanitize_for_linux("📄 Src"))
+            btn_src.config(text="📂 Src")
         btn_src.pack(side="left", padx=2)
         if not source: btn_src.config(state="disabled")
 
@@ -142,12 +158,12 @@ class HomeView(ttk.Frame):
                 messagebox.showerror("Error", "Output file not found.")
 
         btn_out = ttk.Button(actions, command=open_out)
-        img_out = render_emoji_image("👁 View", (MAIN_FONT, 18), "white", btn_out)
+        img_out = render_emoji_image("👁 View", (MAIN_FONT, 12), "white", btn_out)
         if img_out:
             btn_out.config(image=img_out, text="")
             btn_out._img = img_out
         else:
-            btn_out.config(text=platform_utils.sanitize_for_linux("👁 View"))
+            btn_out.config(text="👁 View")
         btn_out.pack(side="left", padx=2)
         
         if not output:
@@ -162,11 +178,10 @@ class HomeView(ttk.Frame):
                 self.refresh_recent_docs()
 
         btn_del = ttk.Button(actions, style="Danger.TButton", command=delete_me)
-        img_del = render_emoji_image("🗑", (MAIN_FONT, 8), "white", btn_del)
+        img_del = render_emoji_image("🗑", (MAIN_FONT, 12), "white", btn_del)
         if img_del:
             btn_del.config(image=img_del, text="")
             btn_del._img = img_del
         else:
-            btn_del.config(text=platform_utils.sanitize_for_linux("🗑"))
+            btn_del.config(text="🗑")
         btn_del.pack(side="left", padx=2)
-

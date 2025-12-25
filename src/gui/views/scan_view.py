@@ -14,15 +14,27 @@ from ...core.emoji_label import EmojiLabel, render_emoji_image
 
 from ..pdf_viewer import PDFViewer
 
-
-
 class ScanView(ttk.Frame):
     """View for single PDF OCR processing."""
     
     def __init__(self, parent, controller):
+
         super().__init__(parent)
         self.controller = controller
         self.build_ui()
+    
+    def _create_check(self, parent, text, var):
+        """Helper to create a checkbutton with custom font support via EmojiLabel."""
+        f = ttk.Frame(parent)
+        f.pack(anchor="w", pady=1)
+        c = ttk.Checkbutton(f, variable=var)
+        c.pack(side="left")
+        l = EmojiLabel(f, text=text, font=(MAIN_FONT, 12))
+        l.pack(side="left", padx=5)
+        # Clicking label toggles check
+        l.bind("<Button-1>", lambda e: var.set(not var.get()))
+        return f
+
     
     def build_ui(self):
         """Build the scan view UI."""
@@ -49,35 +61,36 @@ class ScanView(ttk.Frame):
 
         
         # Options
-        opt_frame = ttk.LabelFrame(self.scan_sidebar, text=app_state.t("grp_options"), padding=10)
-        opt_frame.pack(fill="x", pady=10)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_deskew"), 
-                        variable=self.controller.var_deskew).pack(anchor="w", pady=2)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_clean"), 
-                        variable=self.controller.var_clean).pack(anchor="w", pady=2)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_rotate"), 
-                        variable=self.controller.var_rotate).pack(anchor="w", pady=2)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_force"), 
-                        variable=self.controller.var_force).pack(anchor="w", pady=2)
-        ttk.Checkbutton(opt_frame, text=app_state.t("opt_rasterize"), 
-                        variable=self.controller.var_rasterize).pack(anchor="w", pady=2)
+        opt_group = ttk.Frame(self.scan_sidebar, padding=10, style="Card.TFrame")
+        opt_group.pack(fill="x", pady=10)
+        EmojiLabel(opt_group, text=app_state.t("grp_options"), font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(0, 5))
         
-        dpi_frame = ttk.Frame(opt_frame)
+        self._create_check(opt_group, app_state.t("opt_deskew"), self.controller.var_deskew)
+        self._create_check(opt_group, app_state.t("opt_clean"), self.controller.var_clean)
+        self._create_check(opt_group, app_state.t("opt_rotate"), self.controller.var_rotate)
+        self._create_check(opt_group, app_state.t("opt_force"), self.controller.var_force)
+        self._create_check(opt_group, app_state.t("opt_rasterize"), self.controller.var_rasterize)
+
+        
+        dpi_frame = ttk.Frame(opt_group)
         dpi_frame.pack(fill="x", pady=5)
         EmojiLabel(dpi_frame, text=app_state.t("lbl_dpi"), font=(MAIN_FONT, 14)).pack(side="left")
 
         ttk.Entry(dpi_frame, textvariable=self.controller.var_dpi, width=8).pack(side="right")
 
-        EmojiLabel(opt_frame, text=app_state.t("lbl_optimize"), font=(MAIN_FONT, 14)).pack(anchor="w", pady=(10, 2))
-        ttk.Combobox(opt_frame, textvariable=self.controller.var_optimize, 
+        EmojiLabel(opt_group, text=app_state.t("lbl_optimize"), font=(MAIN_FONT, 14)).pack(anchor="w", pady=(10, 2))
+        ttk.Combobox(opt_group, textvariable=self.controller.var_optimize, 
                      values=["0", "1", "2", "3"], state="readonly").pack(fill="x")
 
+
         # Multi-Select Languages
-        self.lang_frame = ttk.LabelFrame(self.scan_sidebar, text="Processing Languages", padding=10)
-        self.lang_frame.pack(fill="x", pady=10)
+        lang_group = ttk.Frame(self.scan_sidebar, padding=10, style="Card.TFrame")
+        lang_group.pack(fill="x", pady=10)
+        EmojiLabel(lang_group, text="Processing Languages", font=(MAIN_FONT, 10, "bold")).pack(anchor="w", pady=(0, 5))
         
         # Container for dynamic language list
-        self.lang_container = ttk.Frame(self.lang_frame)
+        self.lang_container = ttk.Frame(lang_group)
+
         self.lang_container.pack(fill="x", expand=True)
         
         # Build initial language list
@@ -85,10 +98,17 @@ class ScanView(ttk.Frame):
 
         # Process Button
         self.controller.btn_process = ttk.Button(
-            self.scan_sidebar, text=app_state.t("btn_process"), 
+            self.scan_sidebar, text="", 
             command=self.controller.processing_controller.start_processing_thread, 
             state="disabled", style="Accent.TButton"
         )
+        img_proc = render_emoji_image(app_state.t("btn_process"), (MAIN_FONT, 18), "white", self.controller.btn_process)
+        if img_proc:
+            self.controller.btn_process.config(image=img_proc)
+            self.controller.btn_process._img = img_proc
+        else:
+            self.controller.btn_process.config(text=app_state.t("btn_process"))
+
         self.controller.btn_process.pack(fill="x", pady=20)
         
         # Status Label
@@ -135,9 +155,9 @@ class ScanView(ttk.Frame):
         self.controller.scan_lang_vars = {}
         for l in avail:
             var = tk.BooleanVar(value=(l in last_used))
-            btn = ttk.Checkbutton(lf, text=l, variable=var)
-            btn.pack(anchor="w")
+            self._create_check(lf, l, var)
             self.controller.scan_lang_vars[l] = var
+
 
     def refresh_languages(self):
         """Refresh the language list from available data packs."""

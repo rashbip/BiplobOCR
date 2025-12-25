@@ -21,7 +21,15 @@ class HistoryView(ttk.Frame):
         
         EmojiLabel(header, text=app_state.t("nav_history"), font=(HEADER_FONT, 20, "bold"), foreground=THEME_COLOR).pack(side="left")
 
-        ttk.Button(header, text=app_state.t("btn_clear_history"), command=self.confirm_clear_all, style="Danger.TButton").pack(side="right")
+        btn_clear_hist = ttk.Button(header, command=self.confirm_clear_all, style="Danger.TButton")
+        img_clr = render_emoji_image(app_state.t("btn_clear_history"), (MAIN_FONT, 16), "white", btn_clear_hist)
+        if img_clr:
+            btn_clear_hist.config(image=img_clr, text="")
+            btn_clear_hist._img = img_clr
+        else:
+            btn_clear_hist.config(text=app_state.t("btn_clear_history"))
+        btn_clear_hist.pack(side="right")
+
 
         # Scrollable Area
         self.canvas = tk.Canvas(self, bg=SURFACE_COLOR, highlightthickness=0)

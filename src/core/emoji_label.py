@@ -72,22 +72,40 @@ class EmojiLabel(ttk.Label):
     """
     def __init__(self, master, text="", font=None, **kwargs):
         self._image_ref = None 
+        self._last_font = font
         super().__init__(master, **kwargs)
         if text:
             self.set_text(text, font)
 
+    def configure(self, cnf=None, **kwargs):
+        if IS_LINUX and Pilmoji:
+            if cnf: kwargs.update(cnf)
+            if "text" in kwargs:
+                text = kwargs.pop("text")
+                font = kwargs.get("font") or self._last_font
+                self.set_text(text, font)
+        return super().configure(**kwargs)
+
+    def config(self, cnf=None, **kwargs):
+        return self.configure(cnf, **kwargs)
+
     def set_text(self, text, font=None):
+        self._last_font = font
+        if not text:
+            super().config(text="", image="")
+            return
+
         if not IS_LINUX or not Pilmoji:
-            self.config(text=text)
-            if font: self.config(font=font)
+            super().config(text=text)
+            if font: super().config(font=font)
             return
 
         # On Linux, render entirely to image
         try:
             from .platform_utils import get_base_dir
             
-            # Extract size/color
-            size = 16
+            # Extract size/weight from font tuple if provided
+            size = 16 # Default size
             if font and isinstance(font, tuple) and len(font) > 1:
                 size = font[1]
                 
@@ -103,6 +121,7 @@ class EmojiLabel(ttk.Label):
             # Load Bengali Font
             font_path = os.path.join(get_base_dir(), "assets", "AdorNoirrit.ttf")
             if not os.path.exists(font_path):
+                # Fallback to system font if custom font is missing
                 font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
             
             try:
@@ -111,13 +130,12 @@ class EmojiLabel(ttk.Label):
                 pil_font = ImageFont.load_default()
 
             # Measure and Draw
-            # We use a large enough temporary image for measurement
             dummy_img = Image.new("RGBA", (1, 1), (0,0,0,0))
             draw = ImageDraw.Draw(dummy_img)
             
-            # Use raqm if available (for Bengali ligatures)
-            w = int(pil_font.getlength(text)) + 20
-            h = int(size * 1.5) + 10
+            # We use a large enough image then crop
+            w = int(pil_font.getlength(text)) + 50
+            h = int(size * 2) + 20
             
             img = Image.new("RGBA", (w, h), (0,0,0,0))
             
@@ -126,10 +144,8 @@ class EmojiLabel(ttk.Label):
             
             if has_emoji:
                 with Pilmoji(img) as pilmoji:
-                    # Y offset for emojis to align with text
                     pilmoji.text((5, 5), text, font=pil_font, fill=fg)
             else:
-                # Direct Pillow rendering for best quality/ligatures
                 draw = ImageDraw.Draw(img)
                 draw.text((5, 5), text, font=pil_font, fill=fg)
 
@@ -138,13 +154,8 @@ class EmojiLabel(ttk.Label):
             if bbox: img = img.crop(bbox)
             
             self._image_ref = ImageTk.PhotoImage(img)
-            self.config(image=self._image_ref, text="")
+            super().config(image=self._image_ref, text="")
         except Exception as e:
             import logging
             logging.error(f"EmojiLabel error: {e}")
-            from . import platform_utils
-            self.config(text=platform_utils.sanitize_for_linux(text), image="")
-
-
-
-
+            super().config(text=text)

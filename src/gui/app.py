@@ -448,9 +448,24 @@ class BiplobOCR(TkinterDnD.Tk):
         def close():
             self.success_frame.place_forget()
         
-        ttk.Button(c, text="Save PDF", command=save_pdf, style="Accent.TButton", width=20).pack(pady=5)
-        ttk.Button(c, text="Save Text", command=save_txt, width=20).pack(pady=5)
-        ttk.Button(c, text="Close", command=close, width=20).pack(pady=20)
+        btn_pdf = ttk.Button(c, command=save_pdf, style="Accent.TButton", width=20)
+        img_pdf = render_emoji_image("Save PDF", (MAIN_FONT, 16), "white", btn_pdf)
+        if img_pdf: btn_pdf.config(image=img_pdf); btn_pdf._img=img_pdf
+        else: btn_pdf.config(text="Save PDF")
+        btn_pdf.pack(pady=5)
+
+        btn_txt = ttk.Button(c, command=save_txt, width=20)
+        img_txt = render_emoji_image("Save Text", (MAIN_FONT, 16), "white", btn_txt)
+        if img_txt: btn_txt.config(image=img_txt); btn_txt._img=img_txt
+        else: btn_txt.config(text="Save Text")
+        btn_txt.pack(pady=5)
+
+        btn_close = ttk.Button(c, command=close, width=20)
+        img_close = render_emoji_image("Close", (MAIN_FONT, 16), "white", btn_close)
+        if img_close: btn_close.config(image=img_close); btn_close._img=img_close
+        else: btn_close.config(text="Close")
+        btn_close.pack(pady=20)
+
 
     # ==================== SETTINGS ====================
 

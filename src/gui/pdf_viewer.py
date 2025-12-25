@@ -39,27 +39,62 @@ class PDFViewer(ttk.Frame):
 
 
         # Navigation
-        ttk.Button(self.toolbar, text="First", command=self.first_page, width=5).pack(side="left", padx=1)
-        ttk.Button(self.toolbar, text="<", command=self.prev_page, width=3).pack(side="left", padx=1)
+        btn_first = ttk.Button(self.toolbar, command=self.first_page, width=5)
+        img_first = render_emoji_image("First", (MAIN_FONT, 10), "white", btn_first)
+        if img_first: btn_first.config(image=img_first); btn_first._img=img_first
+        else: btn_first.config(text="First")
+        btn_first.pack(side="left", padx=1)
+
+        btn_prev = ttk.Button(self.toolbar, command=self.prev_page, width=3)
+        img_prev = render_emoji_image("<", (MAIN_FONT, 10), "white", btn_prev)
+        if img_prev: btn_prev.config(image=img_prev); btn_prev._img=img_prev
+        else: btn_prev.config(text="<")
+        btn_prev.pack(side="left", padx=1)
+
         self.lbl_page = EmojiLabel(self.toolbar, text="0 / 0", font=(MAIN_FONT, 10))
         self.lbl_page.pack(side="left", padx=5)
 
-        ttk.Button(self.toolbar, text=">", command=self.next_page, width=3).pack(side="left", padx=1)
-        ttk.Button(self.toolbar, text="Last", command=self.last_page, width=5).pack(side="left", padx=1)
+        btn_next = ttk.Button(self.toolbar, command=self.next_page, width=3)
+        img_next = render_emoji_image(">", (MAIN_FONT, 10), "white", btn_next)
+        if img_next: btn_next.config(image=img_next); btn_next._img=img_next
+        else: btn_next.config(text=">")
+        btn_next.pack(side="left", padx=1)
+
+        btn_last = ttk.Button(self.toolbar, command=self.last_page, width=5)
+        img_last = render_emoji_image("Last", (MAIN_FONT, 10), "white", btn_last)
+        if img_last: btn_last.config(image=img_last); btn_last._img=img_last
+        else: btn_last.config(text="Last")
+        btn_last.pack(side="left", padx=1)
+
         
         ttk.Separator(self.toolbar, orient="vertical").pack(side="left", fill="y", padx=10)
 
         # Zoom
-        ttk.Button(self.toolbar, text="-", command=self.zoom_out, width=3).pack(side="left")
+        btn_zout = ttk.Button(self.toolbar, command=self.zoom_out, width=3)
+        img_zout = render_emoji_image("-", (MAIN_FONT, 10), "white", btn_zout)
+        if img_zout: btn_zout.config(image=img_zout); btn_zout._img=img_zout
+        else: btn_zout.config(text="-")
+        btn_zout.pack(side="left")
+
         self.lbl_zoom = EmojiLabel(self.toolbar, text="100%", font=(MAIN_FONT, 10))
         self.lbl_zoom.pack(side="left", padx=2)
 
-        ttk.Button(self.toolbar, text="+", command=self.zoom_in, width=3).pack(side="left")
+        btn_zin = ttk.Button(self.toolbar, command=self.zoom_in, width=3)
+        img_zin = render_emoji_image("+", (MAIN_FONT, 10), "white", btn_zin)
+        if img_zin: btn_zin.config(image=img_zin); btn_zin._img=img_zin
+        else: btn_zin.config(text="+")
+        btn_zin.pack(side="left")
+
         
         ttk.Separator(self.toolbar, orient="vertical").pack(side="left", fill="y", padx=10)
         
         # Tools
-        ttk.Button(self.toolbar, text="Rotate", command=self.rotate_view).pack(side="left", padx=2)
+        btn_rot = ttk.Button(self.toolbar, command=self.rotate_view)
+        img_rot = render_emoji_image("Rotate", (MAIN_FONT, 10), "white", btn_rot)
+        if img_rot: btn_rot.config(image=img_rot); btn_rot._img=img_rot
+        else: btn_rot.config(text="Rotate")
+        btn_rot.pack(side="left", padx=2)
+
         
         # View Mode Switch (Icon-like)
         self.is_text_mode = False
