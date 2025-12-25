@@ -46,12 +46,13 @@ def render_emoji_image(text, font_spec=("DejaVu Sans", 12), fg="white", master=N
         
         if not pil_font: pil_font = ImageFont.load_default()
         
-        w = int(pil_font.getlength(text)) + 20
-        h = int(size * 1.5) + 5
+        w = int(pil_font.getlength(text)) + 30 # More padding
+        h = int(size * 1.8) + 10 # More height for comfort
         
         img = Image.new("RGBA", (w, h), (0,0,0,0))
         with Pilmoji(img) as pilmoji:
-            pilmoji.text((5, 2), text, font=pil_font, fill=fg)
+            pilmoji.text((10, 5), text, font=pil_font, fill=fg)
+
         
         bbox = img.getbbox()
         if bbox: img = img.crop(bbox)
@@ -97,7 +98,8 @@ class EmojiLabel(ttk.Label):
     def _render_emoji_text(self, text, font_spec):
         # Extract font details
         family = "DejaVu Sans"
-        size = 12
+        size = 14
+
         style = "normal"
         
         if isinstance(font_spec, tuple):
@@ -148,12 +150,13 @@ class EmojiLabel(ttk.Label):
                 pil_font = ImageFont.load_default()
             
             # Measure text
-            w = int(pil_font.getlength(text)) + 20
-            h = int(size * 1.5) + 5
+            w = int(pil_font.getlength(text)) + 30
+            h = int(size * 1.8) + 10
             
             img = Image.new("RGBA", (w, h), (0,0,0,0))
             with Pilmoji(img) as pilmoji:
-                pilmoji.text((5, 2), text, font=pil_font, fill=fg)
+                pilmoji.text((10, 5), text, font=pil_font, fill=fg)
+
             
             # Trim image to content
             bbox = img.getbbox()

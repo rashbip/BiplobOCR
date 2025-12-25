@@ -155,14 +155,15 @@ class ConfigManager:
     def set_option(self, key, value):
         self.config[key] = value
 
-    def t(self, key):
+    def t(self, key, sanitize=True):
         lang = self.get("language", "en")
         text = TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, key)
         
         from . import platform_utils
-        if platform_utils.IS_LINUX:
+        if platform_utils.IS_LINUX and sanitize:
             return platform_utils.sanitize_for_linux(text)
         return text
+
 
 
 

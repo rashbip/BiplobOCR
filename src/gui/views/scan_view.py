@@ -36,7 +36,9 @@ class ScanView(ttk.Frame):
         ttk.Label(self.scan_sidebar, text="Active Task", font=(HEADER_FONT, 14, "bold"), 
                   foreground=THEME_COLOR).pack(anchor="w", pady=(0, 20))
         btn_open = ttk.Button(self.scan_sidebar, command=self.controller.open_pdf, style="Accent.TButton")
-        img_open = render_emoji_image("📂 " + app_state.t("btn_open_computer"), (MAIN_FONT, 10), "white", btn_open)
+        img_open = render_emoji_image("📂 " + app_state.t("btn_open_computer", sanitize=False), (MAIN_FONT, 12), "white", btn_open)
+
+
         if img_open:
             btn_open.config(image=img_open, text="")
             btn_open._img = img_open

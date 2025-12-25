@@ -99,7 +99,9 @@ class HistoryView(ttk.Frame):
                 messagebox.showerror("Error", "Source file not found (Moved/Deleted).")
 
         btn_src = ttk.Button(actions, command=open_src)
-        img_src = render_emoji_image("📄 Src", (MAIN_FONT, 8), "white", btn_src)
+        img_src = render_emoji_image("📄 Src", (MAIN_FONT, 10), "white", btn_src)
+
+
         if img_src:
             btn_src.config(image=img_src, text="")
             btn_src._img = img_src
@@ -117,7 +119,9 @@ class HistoryView(ttk.Frame):
                 messagebox.showerror("Error", "Output file not found (Moved/Deleted).")
 
         btn_out = ttk.Button(actions, command=open_out)
-        img_out = render_emoji_image("👁 View", (MAIN_FONT, 8), "white", btn_out)
+        img_out = render_emoji_image("👁 View", (MAIN_FONT, 10), "white", btn_out)
+
+
         if img_out:
             btn_out.config(image=img_out, text="")
             btn_out._img = img_out
@@ -137,7 +141,9 @@ class HistoryView(ttk.Frame):
                 self.controller.view_home.refresh_recent_docs()
 
         btn_del = ttk.Button(actions, style="Danger.TButton", command=delete_me)
-        img_del = render_emoji_image("🗑 Del", (MAIN_FONT, 8), "white", btn_del)
+        img_del = render_emoji_image("🗑 Del", (MAIN_FONT, 10), "white", btn_del)
+
+
         if img_del:
             btn_del.config(image=img_del, text="")
             btn_del._img = img_del
@@ -147,7 +153,8 @@ class HistoryView(ttk.Frame):
 
         
         # Status (Before Actions)
-        lbl_status = EmojiLabel(row, text=status, width=15, font=(MAIN_FONT, 9, "bold"), background=SURFACE_COLOR)
+        lbl_status = EmojiLabel(row, text=status, width=15, font=(MAIN_FONT, 11, "bold"), background=SURFACE_COLOR)
+
         if "Success" in status or "Completed" in status: lbl_status.config(foreground="#4CAF50")
         elif "Fail" in status: lbl_status.config(foreground="#F44336")
         else: lbl_status.config(foreground="orange")

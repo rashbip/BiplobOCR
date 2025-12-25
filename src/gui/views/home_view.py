@@ -39,7 +39,8 @@ class HomeView(ttk.Frame):
         c1_inner.pack(fill="both", expand=True)
         EmojiLabel(c1_inner, text="📂", font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
         ttk.Label(c1_inner, text=app_state.t("card_new_task"), font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Label(c1_inner, text=app_state.t("card_new_desc"), font=(MAIN_FONT, 10), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+        ttk.Label(c1_inner, text=app_state.t("card_new_desc"), font=(MAIN_FONT, 12), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+
         ttk.Button(c1_inner, text=app_state.t("btn_select_computer"), style="Accent.TButton", command=self.controller.open_pdf_from_home).pack(pady=20, ipadx=10, ipady=5)
         
         # Card 2: Batch Process
@@ -49,7 +50,8 @@ class HomeView(ttk.Frame):
         c2_inner.pack(fill="both", expand=True)
         EmojiLabel(c2_inner, text="📦", font=(MAIN_FONT, 32), background=SURFACE_COLOR).pack(pady=(0,10))
         ttk.Label(c2_inner, text=app_state.t("batch_title"), font=(MAIN_FONT, 16, "bold"), background=SURFACE_COLOR).pack()
-        ttk.Label(c2_inner, text="Process multiple PDFs at once", font=(MAIN_FONT, 10), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+        ttk.Label(c2_inner, text="Process multiple PDFs at once", font=(MAIN_FONT, 12), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
+
         
         ttk.Button(c2_inner, text="Open Batch Tool", style="TButton", command=lambda: self.controller.switch_tab("batch")).pack(pady=20, ipadx=10, ipady=5)
         # The following line was incorrectly indented in the instruction. Assuming it was meant to be removed or part of the lambda.

@@ -62,7 +62,9 @@ class BatchView(ttk.Frame):
 
         # Action Button (Start)
         self.controller.btn_start_batch = ttk.Button(self.sidebar, command=self.controller.start_batch_processing, style="Accent.TButton")
-        img_start = render_emoji_image(app_state.t("btn_start_batch"), (MAIN_FONT, 10), "white", self.controller.btn_start_batch)
+        img_start = render_emoji_image(app_state.t("btn_start_batch", sanitize=False), (MAIN_FONT, 12), "white", self.controller.btn_start_batch)
+
+
         if img_start:
             self.controller.btn_start_batch.config(image=img_start, text="")
             self.controller.btn_start_batch._img = img_start
@@ -82,7 +84,9 @@ class BatchView(ttk.Frame):
         toolbar = ttk.Frame(main_content)
         toolbar.pack(fill="x", pady=5)
         btn_add = ttk.Button(toolbar, command=self.controller.add_batch_files, style="Accent.TButton", width=15)
-        img_add = render_emoji_image(app_state.t("btn_add_files"), (MAIN_FONT, 10), "white", btn_add)
+        img_add = render_emoji_image(app_state.t("btn_add_files", sanitize=False), (MAIN_FONT, 12), "white", btn_add)
+
+
         if img_add:
             btn_add.config(image=img_add, text="")
             btn_add._img = img_add
@@ -91,7 +95,9 @@ class BatchView(ttk.Frame):
         btn_add.pack(side="left", padx=(0, 5))
 
         btn_clear = ttk.Button(toolbar, command=self.controller.clear_batch_files)
-        img_clear = render_emoji_image(app_state.t("btn_clear_list"), (MAIN_FONT, 10), "white", btn_clear)
+        img_clear = render_emoji_image(app_state.t("btn_clear_list", sanitize=False), (MAIN_FONT, 12), "white", btn_clear)
+
+
         if img_clear:
             btn_clear.config(image=img_clear, text="")
             btn_clear._img = img_clear

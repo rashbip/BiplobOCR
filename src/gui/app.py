@@ -167,7 +167,7 @@ class BiplobOCR(TkinterDnD.Tk):
         self.sidebar_header = ttk.Frame(self.sidebar, padding=20)
         self.sidebar_header.pack(fill="x")
         EmojiLabel(self.sidebar_header, text="📜 BiplobOCR", style="Header.TLabel", 
-                  font=(HEADER_FONT, 18, "bold"), foreground=THEME_COLOR).pack(anchor="w")
+                   font=(HEADER_FONT, 22, "bold"), foreground=THEME_COLOR).pack(anchor="w")
         ttk.Label(self.sidebar_header, text="Version 3.3", font=(MAIN_FONT, 8), 
                   foreground="gray").pack(anchor="w")
 
@@ -175,19 +175,23 @@ class BiplobOCR(TkinterDnD.Tk):
         self.nav_frame = ttk.Frame(self.sidebar, padding=(10, 20))
         self.nav_frame.pack(fill="x", expand=True, anchor="n")
         
-        self.btn_home = self._create_nav_btn(app_state.t("nav_home"), "home")
-        self.btn_tools = self._create_nav_btn(app_state.t("nav_scan"), "scan")
-        self.btn_batch = self._create_nav_btn(app_state.t("nav_batch"), "batch")
-        self.btn_history = self._create_nav_btn(app_state.t("nav_history"), "history")
+        self.btn_home = self._create_nav_btn(app_state.t("nav_home", sanitize=False), "home")
+        self.btn_tools = self._create_nav_btn(app_state.t("nav_tools", sanitize=False), "scan")
+        self.btn_batch = self._create_nav_btn(app_state.t("nav_batch", sanitize=False), "batch")
+        self.btn_history = self._create_nav_btn(app_state.t("nav_history", sanitize=False), "history")
+
+
 
 
         # Footer
         self.footer_frame = ttk.Frame(self.sidebar, padding=20)
         self.footer_frame.pack(side="bottom", fill="x")
-        self.btn_settings = self._create_nav_btn(app_state.t("nav_settings"), "settings", parent=self.footer_frame)
+        self.btn_settings = self._create_nav_btn(app_state.t("nav_settings", sanitize=False), "settings", parent=self.footer_frame)
+
 
         self.lbl_help = ttk.Label(self.footer_frame, text=app_state.t("lbl_help"), foreground="gray", 
-                  cursor="hand2")
+                  font=(MAIN_FONT, 10), cursor="hand2")
+
         self.lbl_help.pack(anchor="w", pady=(10, 0))
         self.lbl_help.bind("<Button-1>", lambda e: self._open_help_url())
 
@@ -206,7 +210,8 @@ class BiplobOCR(TkinterDnD.Tk):
         self.btn_cancel_global = ttk.Button(self.status_bar, 
                                              command=self.processing_controller.cancel_processing, 
                                              style="Danger.TButton")
-        img_stop = render_emoji_image("🟥 STOP", (MAIN_FONT, 9), "white", self.btn_cancel_global)
+        img_stop = render_emoji_image("🟥 STOP", (MAIN_FONT, 11), "white", self.btn_cancel_global)
+
         if img_stop:
             self.btn_cancel_global.config(image=img_stop, text="")
             self.btn_cancel_global._img = img_stop # Keep reference
@@ -218,7 +223,8 @@ class BiplobOCR(TkinterDnD.Tk):
         
         self.btn_show_log = ttk.Button(self.status_bar, 
                                          command=self.open_log_view, style="TButton")
-        img_log = render_emoji_image("👁 Show Log", (MAIN_FONT, 9), "white", self.btn_show_log)
+        img_log = render_emoji_image("👁 Show Log", (MAIN_FONT, 11), "white", self.btn_show_log)
+
         if img_log:
             self.btn_show_log.config(image=img_log, text="")
             self.btn_show_log._img = img_log
@@ -250,7 +256,8 @@ class BiplobOCR(TkinterDnD.Tk):
                          style="Nav.TButton")
         
         # On Linux, if text has emojis, render to image
-        img = render_emoji_image(text, (MAIN_FONT, 10), THEME_COLOR, btn)
+        img = render_emoji_image(text, (MAIN_FONT, 12), "white", btn)
+
         if img:
             btn.config(image=img, text="")
             btn._img = img # Keep reference

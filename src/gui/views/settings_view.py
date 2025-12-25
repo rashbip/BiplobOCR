@@ -125,7 +125,8 @@ class SettingsView(ttk.Frame):
             lambda e: self.packs_canvas.itemconfig(self.packs_window, width=e.width))
 
         btn_add_pack = ttk.Button(f_lang, command=self.add_data_pack)
-        img_add = render_emoji_image("➕ Add Data Pack", (MAIN_FONT, 9), "white", btn_add_pack)
+        img_add = render_emoji_image("➕ Add Data Pack", (MAIN_FONT, 11), "white", btn_add_pack)
+
         if img_add:
             btn_add_pack.config(image=img_add, text="")
             btn_add_pack._img = img_add
@@ -153,7 +154,8 @@ class SettingsView(ttk.Frame):
                   foreground="#ff5555").pack(anchor="w")
         btn_reset = ttk.Button(f_danger, style="Danger.TButton", 
                    command=self.factory_reset)
-        img_reset = render_emoji_image("⚠ Factory Reset", (MAIN_FONT, 9), "white", btn_reset)
+        img_reset = render_emoji_image("⚠ Factory Reset", (MAIN_FONT, 11), "white", btn_reset)
+
         if img_reset:
             btn_reset.config(image=img_reset, text="")
             btn_reset._img = img_reset
@@ -229,7 +231,8 @@ class SettingsView(ttk.Frame):
             
             # Icon/Name
             icon = "🔴" if is_disabled else "🟢"
-            lbl = EmojiLabel(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 9))
+            lbl = EmojiLabel(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 11))
+
 
 
             if is_disabled:
@@ -269,7 +272,9 @@ class SettingsView(ttk.Frame):
 
             btn_del = ttk.Button(row, width=3, 
                                   command=make_delete_handler(f), style="Danger.TButton")
-            img_trash = render_emoji_image("🗑", (MAIN_FONT, 9), "white", btn_del)
+            img_trash = render_emoji_image("🗑", (MAIN_FONT, 12), "white", btn_del)
+
+
             if img_trash:
                 btn_del.config(image=img_trash, text="")
                 btn_del._img = img_trash
