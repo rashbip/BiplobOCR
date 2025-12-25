@@ -86,9 +86,11 @@ class StatusController:
             # Update Status
             self.app.lbl_global_status.config(text=txt)
 
-            # Update Log View Image ONLY on page change
-            if page > self.max_page_seen:
-                self.max_page_seen = page
+            # Update Log View Image on page change
+            # Use last_page to detect change
+            current_last_page = getattr(self, 'last_page', -1)
+            
+            if page != current_last_page:
                 if hasattr(self.app, 'log_window') and self.app.log_window.winfo_exists() and pdf_path:
                     self.app.after(0, lambda: self.app.log_window.update_image(pdf_path, page - 1))
             
