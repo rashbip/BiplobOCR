@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 import fitz
-from ...core.emoji_label import EmojiLabel
 from ...core.theme import MAIN_FONT
 
 class LogView(tk.Toplevel):
@@ -19,7 +18,7 @@ class LogView(tk.Toplevel):
         self.frame_img = ttk.LabelFrame(paned, text="Processing Page", padding=0, width=900)
         paned.add(self.frame_img, weight=5) 
         
-        self.lbl_img = EmojiLabel(self.frame_img, text="Waiting...", font=(MAIN_FONT, 14))
+        self.lbl_img = ttk.Label(self.frame_img, text="Waiting...", anchor="center")
         self.lbl_img.pack(fill="both", expand=True, padx=5, pady=5)
 
         

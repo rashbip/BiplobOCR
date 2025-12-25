@@ -53,8 +53,18 @@ class StatusController:
     def update_global_status_detail(self, val, page, total, start_time, pdf_path=None):
         """Update status with detailed progress including ETR calculation."""
         try:
-            # Recalculate val based on max_seen to keep bar smooth
-            real_val = (page / total) * 100 if total else 0
+            if total <= 0: return
+
+            # If page is mistakenly a percentage > page count, normalize it
+            if page > total:
+                # If page is 100 or another high number, it's likely a percentage
+                if page >= 20: # Heuristic: if >20 but total is e.g. 5, it's a percentage
+                    val = page
+                    page = total # Cap it
+                else:
+                    page = total
+
+            real_val = (page / total) * 100
             self.app.global_progress["value"] = real_val
             
             # ETR Calculation

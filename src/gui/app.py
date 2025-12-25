@@ -10,34 +10,25 @@ import sys
 import subprocess
 import webbrowser
 import pikepdf
-# from tkinterdnd2 import TkinterDnD
-import tkinter as tk
+try:
+    from tkinterdnd2 import TkinterDnD
+except ImportError:
+    class TkinterDnD:
+        class Tk(tk.Tk):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+            def drop_target_register(self, *args): pass
+            def dnd_bind(self, *args): pass
+        @staticmethod
+        def install(root): pass
 
-# Mock TkinterDnD to fix Linux X11/TkinterDnD crash
-class MockTkinterDnD:
-    class Tk(tk.Tk):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-        def drop_target_register(self, *args): pass
-        def dnd_bind(self, *args): pass
-
-    # TkinterDnD usually adds these methods to all widgets via monkeypatching
-    # We'll just define them here so they don't crash when called on sub-widgets
-    @staticmethod
-    def install(root): pass
-
-if sys.platform.startswith('linux'):
-    TkinterDnD = MockTkinterDnD
-    # Monkeypatch tk.Widget to prevent crashes in Views
+# Add DnD methods to Widget class if they are missing (prevents crashes in Views)
+if not hasattr(tk.Widget, 'drop_target_register'):
     def drop_target_register(self, *args): pass
     def dnd_bind(self, *args): pass
     tk.Widget.drop_target_register = drop_target_register
     tk.Widget.dnd_bind = dnd_bind
-else:
-    try:
-        from tkinterdnd2 import TkinterDnD
-    except ImportError:
-         TkinterDnD = MockTkinterDnD
+
 
 # Local imports
 from ..core.constants import APP_NAME
@@ -368,9 +359,13 @@ class BiplobOCR(TkinterDnD.Tk):
         self.success_frame.place_forget()
         self.lbl_status.config(text=f"Loaded: {os.path.basename(pdf)}")
 
-    def open_dropped_pdf(self, file_path):
+    def open_dropped_pdf(self, file_path_raw):
         """Open a dropped PDF file."""
-        file_path = file_path.strip('{}')
+        if not file_path_raw: return
+        paths = self.tk.splitlist(file_path_raw)
+        if not paths: return
+        file_path = paths[0] # Take the first if multiple dropped
+
         if not file_path.lower().endswith('.pdf'):
             messagebox.showerror("Error", "Only PDF files are supported.")
             return

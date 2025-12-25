@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, Menu, filedialog
+import os
 
 import fitz  # PyMuPDF
 from PIL import Image, ImageTk
@@ -43,7 +44,7 @@ class PDFViewer(ttk.Frame):
         # Open File Button
         btn_open = ttk.Button(self.toolbar, command=self.open_file)
         # Using a direct call to the key if possible, or just the string
-        img_open = render_emoji_image("📂 " + app_state.t("btn_open_computer"), (MAIN_FONT, 10), "white", btn_open)
+        img_open = render_emoji_image(app_state.t("btn_open_computer"), (MAIN_FONT, 10), "white", btn_open)
         if img_open:
             btn_open.config(image=img_open, text="")
             btn_open._img = img_open
@@ -222,7 +223,7 @@ class PDFViewer(ttk.Frame):
             self.total_pages = len(self.doc)
             self.current_page = 0
             self.rotation = 0
-            self.lbl_filename.config(text=path.split("/")[-1].split("\\")[-1])
+            self.lbl_filename.set_text(os.path.basename(path))
             self.show_page()
             self.update_ui_state()
         except Exception as e:

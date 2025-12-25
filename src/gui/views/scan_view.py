@@ -22,6 +22,17 @@ class ScanView(ttk.Frame):
         super().__init__(parent)
         self.controller = controller
         self.build_ui()
+        
+        # Drag & Drop Registration
+        try:
+            from tkinterdnd2 import DND_FILES
+            self.drop_target_register(DND_FILES)
+            self.dnd_bind('<<Drop>>', self.on_drop)
+        except: pass
+
+    def on_drop(self, event):
+        if event.data:
+            self.controller.open_dropped_pdf(event.data)
     
     def _create_check(self, parent, text, var):
         """Helper to create a checkbutton with custom font support via EmojiLabel."""
@@ -49,7 +60,7 @@ class ScanView(ttk.Frame):
                   foreground=THEME_COLOR).pack(anchor="w", pady=(0, 20))
 
         btn_open = ttk.Button(self.scan_sidebar, command=self.controller.open_pdf, style="Accent.TButton")
-        img_open = render_emoji_image("📂 " + app_state.t("btn_open_computer", sanitize=False), (MAIN_FONT, 18), "white", btn_open)
+        img_open = render_emoji_image(app_state.t("btn_open_computer", sanitize=False), (MAIN_FONT, 18), "white", btn_open)
         if img_open:
             btn_open.config(image=img_open, text="")
             btn_open._img = img_open

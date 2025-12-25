@@ -66,17 +66,19 @@ TRANSLATIONS = {
         "home_desc": "Ready to digitize your documents? Start a new scan or pick up where you left off.",
         "card_new_task": "Start a new OCR task",
         "card_new_desc": "Proccess PDF Files • Drag & Drop Supported",
-        "btn_select_computer": "Select from Computer",
-        "btn_open_batch": "Select Files",
+
         "home_recent": "Recent Activity",
         "batch_title": "Batch Processing",
         "batch_desc": "Process multiple documents automatically.",
+        "lbl_batch_opts": "Batch Options",
+        "btn_add_files": "➕ Add Files",
+        "btn_clear_list": "🗑️ Clear List",
         "btn_start_batch": "▶️ Start Batch",
-
         "btn_open_computer": "📂 Open from Computer",
         "lbl_danger_zone": "Danger Zone",
         "lbl_factory_reset_desc": "Reset application to factory defaults. This cannot be undone."
     },
+
 
     "bn": {
         "app_title": "BiplobOCR - PDF স্ক্যানার",
@@ -95,7 +97,7 @@ TRANSLATIONS = {
         "opt_rasterize": "ইমেজ রাস্টারাইজ করুন (ত্রুটি ঠিক করে)",
         "lbl_dpi": "রাস্টারাইজেশন DPI (0 = অটো/আসল)",
         "lbl_optimize": "অপ্টিমাইজেশন (0=নাই, 3=সর্বোচ্চ)",
-        "lbl_optimize": "অপ্টিমাইজেশন (0=নাই, 3=সর্বোচ্চ)",
+
         "lbl_lang": "ইন্টারফেস ভাষা (Interface)",
         "lbl_ocr_lang": "OCR ভাষা (ডাটা প্যাক)",
         "lbl_theme": "থিম",
@@ -127,11 +129,15 @@ TRANSLATIONS = {
         "home_recent": "সাম্প্রতিক কার্যকলাপ",
         "batch_title": "ব্যাচ প্রসেসিং",
         "batch_desc": "একাধিক ডকুমেন্ট একসাথে প্রসেস করুন।",
-        "btn_add_files": "➕ ফাইল যোগ করুন",
-        "btn_clear_list": "🗑 তালিকা পরিষ্কার করুন",
         "lbl_batch_opts": "ব্যাচ অপশন",
-        "btn_start_batch": "▶️ ব্যাচ শুরু করুন"
+        "btn_add_files": "➕ ফাইল যোগ করুন",
+        "btn_clear_list": "🗑️ তালিকা পরিষ্কার করুন",
+        "btn_start_batch": "▶️ ব্যাচ শুরু করুন",
+        "btn_open_computer": "📂 কম্পিউটার থেকে ওপেন করুন",
+        "lbl_danger_zone": "ডেঞ্জার জোন",
+        "lbl_factory_reset_desc": "অ্যাপ্লিকেশন ফ্যাক্টরি রিসেট করুন। এটি পরিবর্তন করা সম্ভব নয়।"
     }
+
 }
 
 class ConfigManager:

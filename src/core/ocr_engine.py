@@ -308,11 +308,14 @@ def _run_ocr_layer_injection(input_path, output_path, options, progress_callback
     back into the original PDF pages, preserving all original vectors and annotations.
     """
     temp_dir = tempfile.mkdtemp(prefix="biplob_injection_")
+    doc = None
+    layer_doc = None
     try:
         if log_callback: log_callback("Strategizing: Using Non-Destructive Layer Injection...")
         
         doc = fitz.open(input_path)
         total_pages = len(doc)
+
         
         # 1. Prepare Images for Tesseract
         custom_dpi = options.get("dpi", 0) if options else 0
@@ -329,7 +332,7 @@ def _run_ocr_layer_injection(input_path, output_path, options, progress_callback
                 pix.save(img_path)
                 f_list.write(img_path + "\n")
                 
-                if progress_callback: progress_callback(int((i + 1) / total_pages * 20)) # First 20% for rendering
+                if progress_callback: progress_callback(i + 1)
 
         # 2. Run Tesseract to get transparent PDF text layer
         if log_callback: log_callback("Tesseract is analyzing pages...")
@@ -354,7 +357,7 @@ def _run_ocr_layer_injection(input_path, output_path, options, progress_callback
         
         # Using a special helper to track progress of a raw tesseract call is hard, 
         # so we just show it's active.
-        _run_cmd(cmd, env, log_callback=log_callback)
+        _run_cmd(cmd, env, progress_callback=progress_callback, log_callback=log_callback)
         
         ocr_layer_pdf = tess_out_base + ".pdf"
         if not os.path.exists(ocr_layer_pdf):
@@ -378,12 +381,22 @@ def _run_ocr_layer_injection(input_path, output_path, options, progress_callback
             # Overlay=True puts it on top (standard for searching)
             orig_page.show_pdf_page(orig_page.rect, layer_doc, i, overlay=True)
             
-            if progress_callback: 
-                progress_callback(int(20 + (i + 1) / total_pages * 70)) # Next 70% for injection
+            if progress_callback: progress_callback(i + 1)
 
         # 4. Save Final PDF
         if log_callback: log_callback("Finalizing document...")
-        doc.save(output_path, deflate=True) # preserve original as much as possible
+        try:
+            doc.save(output_path, deflate=True, garbage=3)
+        except Exception as e:
+            if "incremental" in str(e).lower():
+                # Robust fallback for PyMuPDF file-locking/state quirks
+                # Save to memory buffer first, then write to disk
+                logging.warning("Standard save failed (incremental quirk). Using memory buffer fallback.")
+                pdf_data = doc.tobytes(deflate=True, garbage=3)
+                with open(output_path, "wb") as f:
+                    f.write(pdf_data)
+            else:
+                raise e
         
         # 5. Generate Sidecar
         sidecar_file = output_path.replace(".pdf", ".txt")
@@ -393,10 +406,9 @@ def _run_ocr_layer_injection(input_path, output_path, options, progress_callback
         with open(sidecar_file, "w", encoding="utf-8") as f:
             f.write(full_text)
             
-        doc.close()
-        layer_doc.close()
+
         
-        if progress_callback: progress_callback(100)
+        if progress_callback: progress_callback(total_pages)
         return sidecar_file
 
     except Exception as e:
@@ -404,8 +416,11 @@ def _run_ocr_layer_injection(input_path, output_path, options, progress_callback
         logging.error(f"Layer Injection Error: {e}")
         raise OCRError(f"Layer Injection Strategy Failed: {str(e)}")
     finally:
+        if doc: doc.close()
+        if layer_doc: layer_doc.close()
         try: shutil.rmtree(temp_dir)
         except: pass
+
 
 def _run_cmd(cmd, env, progress_callback=None, log_callback=None):
     """
