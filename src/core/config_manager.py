@@ -3,7 +3,7 @@ import json
 import os
 import locale
 
-CONFIG_FILE = "config.json"
+# CONFIG_FILE name moved to instance level to support dynamic path
 
 DEFAULT_CONFIG = {
     "theme": "dark",
@@ -143,12 +143,16 @@ TRANSLATIONS = {
 
 class ConfigManager:
     def __init__(self):
+        from . import platform_utils
+        self.config_dir = platform_utils.get_app_data_dir()
+        os.makedirs(self.config_dir, exist_ok=True)
+        self.config_path = os.path.join(self.config_dir, "config.json")
         self.config = self.load_config()
     
     def load_config(self):
-        if os.path.exists(CONFIG_FILE):
+        if os.path.exists(self.config_path):
             try:
-                with open(CONFIG_FILE, "r") as f:
+                with open(self.config_path, "r") as f:
                     return {**DEFAULT_CONFIG, **json.load(f)}
             except:
                 return DEFAULT_CONFIG.copy()
@@ -156,7 +160,7 @@ class ConfigManager:
 
     def save_config(self, new_config):
         self.config = {**self.config, **new_config}
-        with open(CONFIG_FILE, "w") as f:
+        with open(self.config_path, "w") as f:
             json.dump(self.config, f, indent=4)
     
     def get(self, key, default=None):

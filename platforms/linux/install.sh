@@ -33,6 +33,12 @@ if [ -f "icon.png" ]; then
     fi
 fi
 
+# Copy Uninstaller to Opt
+if [ -f "uninstall.sh" ]; then
+    cp "uninstall.sh" "$INSTALL_DIR/uninstall.sh"
+    chmod +x "$INSTALL_DIR/uninstall.sh"
+fi
+
 # 2. Create Symlink
 echo "[2/4] Creating Command Alias..."
 ln -sf "$INSTALL_DIR/$APPIMAGE_NAME" "$BIN_DIR/biplobocr"
@@ -66,4 +72,6 @@ echo "-----------------------------------"
 echo "Installation Complete!"
 echo "Run from terminal: biplobocr"
 echo "Or find 'BiplobOCR' in your application menu."
+echo ""
+echo "To uninstall: sudo /opt/BiplobOCR/uninstall.sh"
 echo "-----------------------------------"

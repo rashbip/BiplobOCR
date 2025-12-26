@@ -100,6 +100,52 @@ def setup_python_environment():
             logging.info(f"Added bundled Linux site-packages to path: {site_packages}")
 
 
+def get_app_data_dir():
+    """
+    Returns the application data directory.
+    Implements portability: 
+    1. Try ~/.local/share/BiplobOCR (Linux) or LOCALAPPDATA (Windows).
+    2. If NOT accessible OR if 'Biplob_Portable' folder exists next to app, use portable.
+    """
+    # 1. Standard Path
+    if IS_WINDOWS:
+        home_data = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser("~")), "BiplobOCR")
+    else:
+        home_data = os.path.join(os.path.expanduser("~"), ".local", "share", "BiplobOCR")
+
+    # 2. Check if Portable folder ALREADY exists (Force Portable Mode)
+    portable_candidate = None
+    appimage_path = os.environ.get('APPIMAGE')
+    if appimage_path:
+        portable_candidate = os.path.join(os.path.dirname(appimage_path), "Biplob_Portable")
+    else:
+        try:
+             root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+             portable_candidate = os.path.join(root_dir, "Biplob_Portable")
+        except: pass
+
+    if portable_candidate and os.path.exists(portable_candidate):
+        return portable_candidate
+
+    # 3. Check if we can write to home_data
+    try:
+        os.makedirs(home_data, exist_ok=True)
+        # Test write access
+        test_file = os.path.join(home_data, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return home_data
+    except:
+        # 4. Fallback to Portable next to executable if home_data is unreachable
+        if portable_candidate:
+            try:
+                os.makedirs(portable_candidate, exist_ok=True)
+                return portable_candidate
+            except: pass
+    
+    return home_data # Final fallback
+
 def setup_tesseract_environment():
     """Configure environment to use bundled Tesseract if available."""
     try:
@@ -123,7 +169,7 @@ def setup_tesseract_environment():
         import shutil
         
         # 1. Define User Writable Tessdata Dir
-        user_data_dir = os.path.join(os.path.expanduser("~"), ".local", "share", "BiplobOCR")
+        user_data_dir = get_app_data_dir()
         writable_tessdata = os.path.join(user_data_dir, "tessdata")
         os.makedirs(writable_tessdata, exist_ok=True)
         

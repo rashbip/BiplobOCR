@@ -2,16 +2,18 @@ import json
 import os
 import time
 
-HISTORY_FILE = "history.json"
+# HISTORY_FILE moved to instance level
 
 class HistoryManager:
     def __init__(self):
+        from . import platform_utils
+        self.history_path = os.path.join(platform_utils.get_app_data_dir(), "history.json")
         self.history = self.load_history()
 
     def load_history(self):
-        if os.path.exists(HISTORY_FILE):
+        if os.path.exists(self.history_path):
             try:
-                with open(HISTORY_FILE, "r") as f:
+                with open(self.history_path, "r") as f:
                     return json.load(f)
             except:
                 return []
@@ -21,7 +23,7 @@ class HistoryManager:
         # Keep only last 50
         if len(self.history) > 50:
             self.history = self.history[:50]
-        with open(HISTORY_FILE, "w") as f:
+        with open(self.history_path, "w") as f:
             json.dump(self.history, f, indent=4)
 
     def add_entry(self, filename, status, size="N/A", source_path=None, output_path=None):

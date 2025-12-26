@@ -23,9 +23,11 @@ mkdir -p "$STAGING_DIR"
 echo "Staging files..."
 cp "$APPIMAGE" "$STAGING_DIR/"
 cp "$SCRIPT_DIR/install.sh" "$STAGING_DIR/"
+cp "$SCRIPT_DIR/uninstall.sh" "$STAGING_DIR/"
 cp "$PROJECT_ROOT/src/assets/icon.png" "$STAGING_DIR/"
 
 chmod +x "$STAGING_DIR/install.sh"
+chmod +x "$STAGING_DIR/uninstall.sh"
 chmod +x "$STAGING_DIR/BiplobOCR-x86_64.AppImage"
 
 # 3. Create Archive (Tarball)

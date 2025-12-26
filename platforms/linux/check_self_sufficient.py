@@ -34,12 +34,19 @@ def check_dependencies():
             missing.append(dep["name"])
 
     # Check for Zenity (to bundle)
-    zenity_path = shutil.which("zenity")
-    if zenity_path:
-         print(f"  [OK] Zenity found at {zenity_path} (Will be bundled)")
+    zenity_bundled = os.path.join(src_dir, "bin", "linux", "zenity")
+    zenity_system = shutil.which("zenity")
+    
+    if os.path.exists(zenity_bundled):
+         print(f"  [OK] Bundled Zenity found at {zenity_bundled}")
+    elif zenity_system:
+         print(f"  [OK] Zenity found in system at {zenity_system} (Will be bundled)")
     else:
-         print("  [WARNING] Zenity not found on host system! Cannot bundle.")
-         missing.append("Zenity (System)")
+         print("  [WARNING] Zenity not found! Native dialogs might fail.")
+         # missing.append("Zenity") # Don't block build if user really wants to skip or managed otherwise, 
+         # but let's keep it as warning. 
+         # Actually user said "manage to have zenity in the app itself" so I should probably block if neither found.
+         missing.append("Zenity")
 
     if missing:
         print("\nCRITICAL: Missing dependencies! Cannot build self-sufficient AppImage.")
