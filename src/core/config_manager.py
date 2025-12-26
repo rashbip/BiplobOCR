@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
 
 TRANSLATIONS = {
     "en": {
-        "app_title": "BiplobOCR - PDF Scanner",
+        "app_title": "BiplobOCR",
         "settings_title": "Settings",
         "btn_process": "🚀 Start OCR",
 
@@ -82,7 +82,7 @@ TRANSLATIONS = {
 
 
     "bn": {
-        "app_title": "BiplobOCR - PDF স্ক্যানার",
+        "app_title": "BiplobOCR",
         "settings_title": "সেটিংস",
         "btn_process": "🚀 OCR শুরু করুন",
 

@@ -61,9 +61,10 @@ class BiplobOCR(TkinterDnD.Tk):
     
     def __init__(self):
         super().__init__(className='BiplobOCR')
+        self.option_add('*name', 'BiplobOCR')
         self.withdraw()
         
-        self.title(app_state.t("app_title"))
+        self.title("BiplobOCR")
         self.geometry("1400x900") 
         self.minsize(1100, 750)
         self.configure(bg=BG_COLOR)

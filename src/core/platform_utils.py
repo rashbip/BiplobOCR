@@ -103,49 +103,52 @@ def setup_python_environment():
 def get_app_data_dir():
     """
     Returns the application data directory.
-    Implements portability: 
-    1. Try ~/.local/share/BiplobOCR (Linux) or LOCALAPPDATA (Windows).
-    2. If NOT accessible OR if 'BiplobOCR_Data' folder exists next to app, use portable.
+    Simplified: 
+    1. Check for 'BiplobOCR_Data' next to the app. Use if it exists.
+    2. Try ~/.local/share/BiplobOCR.
+    3. If Step 2 fails (Read-only), use 'BiplobOCR_Data' next to the app.
     """
-    # 1. Standard Path
-    if IS_WINDOWS:
-        home_data = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser("~")), "BiplobOCR")
-    else:
-        home_data = os.path.join(os.path.expanduser("~"), ".local", "share", "BiplobOCR")
-
-    # 2. Check if Portable folder ALREADY exists (Force Portable Mode)
-    portable_candidate = None
     appimage_path = os.environ.get('APPIMAGE')
     if appimage_path:
-        portable_candidate = os.path.join(os.path.dirname(appimage_path), "BiplobOCR_Data")
+        local_dir = os.path.join(os.path.dirname(appimage_path), "BiplobOCR_Data")
     else:
         try:
              # src/core/platform_utils.py -> src -> root
-             root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-             portable_candidate = os.path.join(root_dir, "BiplobOCR_Data")
-        except: pass
+             base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+             local_dir = os.path.join(base, "BiplobOCR_Data")
+        except:
+             local_dir = None
+    # Function to check if a directory is truly writable
+    def is_writable(path):
+        if not path: return False
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=True)
+            test_f = os.path.join(path, ".write_test")
+            with open(test_f, "w") as f: f.write("ok")
+            os.remove(test_f)
+            return True
+        except:
+            return False
 
-    if portable_candidate and os.path.exists(portable_candidate):
-        return portable_candidate
+    # Priority 0: If local dir exists AND is writable, use it.
+    if local_dir and os.path.exists(local_dir) and is_writable(local_dir):
+        return local_dir
 
-    # 3. Check if we can write to home_data
-    try:
-        os.makedirs(home_data, exist_ok=True)
-        # Test write access
-        test_file = os.path.join(home_data, ".write_test")
-        with open(test_file, "w") as f:
-            f.write("test")
-        os.remove(test_file)
-        return home_data
-    except:
-        # 4. Fallback to Portable next to executable if home_data is unreachable
-        if portable_candidate:
-            try:
-                os.makedirs(portable_candidate, exist_ok=True)
-                return portable_candidate
-            except: pass
-    
-    return home_data # Final fallback
+    # Priority 1: Home dir
+    if IS_WINDOWS:
+        home_path = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser("~")), "BiplobOCR")
+    else:
+        home_path = os.path.join(os.path.expanduser("~"), ".local", "share", "BiplobOCR")
+
+    if is_writable(home_path):
+        return home_path
+
+    # Priority 2: Try creating local folder as last resort
+    if is_writable(local_dir):
+        return local_dir
+
+    return home_path # Final fallback
 
 def setup_tesseract_environment():
     """Configure environment to use bundled Tesseract if available."""
