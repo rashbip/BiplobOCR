@@ -75,9 +75,15 @@ cp -r "$DIST_DIR/$APP_NAME/"* "$APP_DIR/usr/bin/"
 
 # Copy Zenity (Self-Sufficient!)
 ZENITY_PATH=$(which zenity)
+if [ ! -f "$ZENITY_PATH" ]; then
+    # Fallback to our bundled one if system one is missing
+    ZENITY_PATH="$SRC_DIR/bin/linux/zenity"
+fi
+
 if [ -f "$ZENITY_PATH" ]; then
     echo "Bundling Zenity from $ZENITY_PATH..."
     cp "$ZENITY_PATH" "$APP_DIR/usr/bin/zenity"
+    chmod +x "$APP_DIR/usr/bin/zenity"
 else
     echo "WARNING: Zenity not found! Native dialogs might fail if not on host."
 fi

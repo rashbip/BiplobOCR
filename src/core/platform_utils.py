@@ -298,11 +298,31 @@ def get_subprocess_creation_flags():
         # but if we need a flag value, we can return 0
         return 0 
 
+def get_zenity_path():
+    """Returns the path to the bundled or system zenity binary."""
+    if not IS_LINUX:
+        return "zenity"
+        
+    base_dir = get_base_dir()
+    # Try our bundled version first (now in src/bin/linux)
+    bundled_zenity = os.path.join(base_dir, "src", "bin", "linux", "zenity")
+    
+    if os.path.exists(bundled_zenity):
+        # Ensure it is executable
+        if not os.access(bundled_zenity, os.X_OK):
+            try:
+                os.chmod(bundled_zenity, 0o755)
+            except: pass
+        return bundled_zenity
+        
+    return "zenity"
+
 def linux_file_dialog(title="Select File", initialdir=None, multiple=False, save=False, filetypes=None):
     """Uses zenity to show a native file dialog on Linux to avoid Tkinter render bugs."""
     if not IS_LINUX: return None
     
-    cmd = ["zenity", "--file-selection", "--title", title]
+    zenity_bin = get_zenity_path()
+    cmd = [zenity_bin, "--file-selection", "--title", title]
     if initialdir:
         cmd.extend(["--filename", os.path.join(initialdir, "")])
     if multiple:
@@ -335,7 +355,8 @@ def linux_directory_dialog(title="Select Folder", initialdir=None):
     """Uses zenity for native directory selection on Linux."""
     if not IS_LINUX: return None
     
-    cmd = ["zenity", "--file-selection", "--directory", "--title", title]
+    zenity_bin = get_zenity_path()
+    cmd = [zenity_bin, "--file-selection", "--directory", "--title", title]
     if initialdir:
         cmd.extend(["--filename", os.path.join(initialdir, "")])
     
