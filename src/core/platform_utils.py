@@ -105,7 +105,7 @@ def get_app_data_dir():
     Returns the application data directory.
     Implements portability: 
     1. Try ~/.local/share/BiplobOCR (Linux) or LOCALAPPDATA (Windows).
-    2. If NOT accessible OR if 'Biplob_Portable' folder exists next to app, use portable.
+    2. If NOT accessible OR if 'BiplobOCR_Data' folder exists next to app, use portable.
     """
     # 1. Standard Path
     if IS_WINDOWS:
@@ -117,11 +117,12 @@ def get_app_data_dir():
     portable_candidate = None
     appimage_path = os.environ.get('APPIMAGE')
     if appimage_path:
-        portable_candidate = os.path.join(os.path.dirname(appimage_path), "Biplob_Portable")
+        portable_candidate = os.path.join(os.path.dirname(appimage_path), "BiplobOCR_Data")
     else:
         try:
+             # src/core/platform_utils.py -> src -> root
              root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-             portable_candidate = os.path.join(root_dir, "Biplob_Portable")
+             portable_candidate = os.path.join(root_dir, "BiplobOCR_Data")
         except: pass
 
     if portable_candidate and os.path.exists(portable_candidate):
@@ -200,10 +201,11 @@ def setup_tesseract_environment():
                      except Exception as e:
                          logging.error(f"Failed to copy {item}: {e}")
         
-        # 4. Set TESSDATA_PREFIX to the WRITABLE location
-        # This allows the user to install new languages via the GUI
-        os.environ["TESSDATA_PREFIX"] = writable_tessdata
-        logging.info(f"Tessdata Prefix set to User Dir: {writable_tessdata}")
+        # 4. Set TESSDATA_PREFIX to the PARENT of tessdata folder
+        # Tesseract expects the prefix to be the directory CONTAINING the 'tessdata' folder.
+        app_data_dir = get_app_data_dir()
+        os.environ["TESSDATA_PREFIX"] = app_data_dir
+        logging.info(f"Tessdata Prefix set to: {app_data_dir}")
         
     except Exception as e:
         logging.error(f"Failed to setup local Tesseract: {e}")
@@ -241,9 +243,8 @@ def setup_ghostscript_environment():
         logging.error(f"Failed to setup local Ghostscript: {e}")
 
 def get_tessdata_dir():
-    """Returns the path to the tessdata directory."""
-    base_dir = get_base_dir()
-    return os.path.join(base_dir, "tesseract", get_tesseract_dir_name(), "tessdata")
+    """Returns the path to the writable tessdata directory."""
+    return os.path.join(get_app_data_dir(), "tessdata")
 
 def setup_fonts():
     """Register custom fonts from assets folder. Returns font family name on success, None on failure."""

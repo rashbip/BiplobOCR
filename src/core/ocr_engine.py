@@ -353,7 +353,7 @@ def _run_ocr_layer_injection(input_path, output_path, options, progress_callback
         ]
         
         env = os.environ.copy()
-        env["TESSDATA_PREFIX"] = get_tessdata_dir()
+        env["TESSDATA_PREFIX"] = platform_utils.get_app_data_dir()
         
         # Using a special helper to track progress of a raw tesseract call is hard, 
         # so we just show it's active.
@@ -533,6 +533,7 @@ def _run_ocr_single(input_path, output_path, force, options, progress_callback, 
         safe_jobs = max(1, int(options.get("max_cpu_threads", 2)))
     
     env["OMP_THREAD_LIMIT"] = "1"
+    env["TESSDATA_PREFIX"] = platform_utils.get_app_data_dir()
     base_cmd.extend(["--jobs", str(safe_jobs)])
 
     # GPU Setup

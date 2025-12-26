@@ -199,10 +199,21 @@ class SettingsView(ttk.Frame):
         print("Factory reset triggered")
         if messagebox.askyesno("Factory Reset", "Are you sure you want to reset all settings and data?"):
             try:
-                if os.path.exists("config.json"):
-                    os.remove("config.json")
-                if os.path.exists("history.json"):
-                    os.remove("history.json")
+                from ...core import platform_utils
+                data_dir = platform_utils.get_app_data_dir()
+                
+                # Use class/instance properties if they were available, 
+                # but we can also just recreate them here for reliability during reset
+                conf_path = os.path.join(data_dir, "config.json")
+                hist_path = os.path.join(data_dir, "history.json")
+                
+                if os.path.exists(conf_path):
+                    os.remove(conf_path)
+                if os.path.exists(hist_path):
+                    os.remove(hist_path)
+                
+                # Also clear tessdata/temp if we want a TRULY clean reset
+                # but let's stick to configs first for safety unless requested.
                 
                 messagebox.showinfo("Reset Complete", "Application will now restart.")
                 self.controller.restart_application(force=True)
