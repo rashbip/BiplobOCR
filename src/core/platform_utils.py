@@ -203,7 +203,7 @@ def setup_fonts():
     """Register custom fonts from assets folder. Returns font family name on success, None on failure."""
     try:
         base_dir = get_base_dir()
-        font_path = os.path.join(base_dir, "src", "assets", "AdorNoirrit.ttf")
+        font_path = os.path.join(base_dir, "assets", "AdorNoirrit.ttf")
         
         if not os.path.exists(font_path):
             return None
@@ -305,7 +305,7 @@ def get_zenity_path():
         
     base_dir = get_base_dir()
     # Try our bundled version first (now in src/bin/linux)
-    bundled_zenity = os.path.join(base_dir, "src", "bin", "linux", "zenity")
+    bundled_zenity = os.path.join(base_dir, "bin", "linux", "zenity")
     
     if os.path.exists(bundled_zenity):
         # Ensure it is executable
