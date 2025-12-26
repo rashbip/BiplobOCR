@@ -60,7 +60,7 @@ class BiplobOCR(TkinterDnD.Tk):
     """Main application window."""
     
     def __init__(self):
-        super().__init__()
+        super().__init__(className='BiplobOCR')
         self.withdraw()
         
         self.title(app_state.t("app_title"))
@@ -71,7 +71,7 @@ class BiplobOCR(TkinterDnD.Tk):
         # Icon and Window Class
         try:
             from ..core.platform_utils import get_base_dir
-            icon_path = os.path.join(get_base_dir(), "assets", "icon.png")
+            icon_path = os.path.join(get_base_dir(), "src", "assets", "icon.png")
             if os.path.exists(icon_path):
                  from PIL import Image, ImageTk
                  # High res icon for taskbar
@@ -81,7 +81,7 @@ class BiplobOCR(TkinterDnD.Tk):
                  
                  # Set Windows specific icon if needed
                  if os.name == 'nt':
-                     self.iconbitmap(os.path.join(get_base_dir(), "assets", "icon.ico"))
+                     self.iconbitmap(os.path.join(get_base_dir(), "src", "assets", "icon.ico"))
         except Exception as e:
             print(f"Failed to load icon: {e}")
 

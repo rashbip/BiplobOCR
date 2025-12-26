@@ -32,7 +32,7 @@ def render_emoji_image(text, font_spec=("DejaVu Sans", 12), fg="white", master=N
 
         base_dir = get_base_dir()
         fallbacks = [
-            os.path.join(base_dir, "assets", "AdorNoirrit.ttf"),
+            os.path.join(base_dir, "src", "assets", "AdorNoirrit.ttf"),
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
         ]
         
@@ -140,7 +140,7 @@ class EmojiLabel(ttk.Label):
             fg = get_rgb(fg_tk)
 
             # Load Bengali Font
-            font_path = os.path.join(get_base_dir(), "assets", "AdorNoirrit.ttf")
+            font_path = os.path.join(get_base_dir(), "src", "assets", "AdorNoirrit.ttf")
             if not os.path.exists(font_path):
                 # Fallback to system font if custom font is missing
                 font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
