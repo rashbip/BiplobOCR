@@ -89,7 +89,9 @@ class BatchView(ttk.Frame):
             self.controller.btn_start_batch.config(image=img_start, text="")
             self.controller.btn_start_batch._img = img_start
         else:
-            self.controller.btn_start_batch.config(text=app_state.t("btn_start_batch"))
+            from ...core import platform_utils
+            sanitized = platform_utils.sanitize_for_linux(app_state.t("btn_start_batch"))
+            self.controller.btn_start_batch.config(text=sanitized)
 
 
 
@@ -113,7 +115,9 @@ class BatchView(ttk.Frame):
             btn_add.config(image=img_add, text="")
             btn_add._img = img_add
         else:
-            btn_add.config(text=app_state.t("btn_add_files", sanitize=False))
+            from ...core import platform_utils
+            sanitized = platform_utils.sanitize_for_linux(app_state.t("btn_add_files", sanitize=False))
+            btn_add.config(text=sanitized)
 
 
         btn_add.pack(side="left", padx=(0, 5))
@@ -124,7 +128,9 @@ class BatchView(ttk.Frame):
             btn_clear.config(image=img_clear, text="")
             btn_clear._img = img_clear
         else:
-            btn_clear.config(text=app_state.t("btn_clear_list"))
+            from ...core import platform_utils
+            sanitized = platform_utils.sanitize_for_linux(app_state.t("btn_clear_list"))
+            btn_clear.config(text=sanitized)
 
         btn_clear.pack(side="left", padx=(0, 5))
 

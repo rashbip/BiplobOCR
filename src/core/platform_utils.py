@@ -119,10 +119,45 @@ def setup_tesseract_environment():
         else:
             logging.warning(f"Bundled Tesseract NOT found at: {tess_exe}. Utilizing system PATH.")
 
-        # Set TESSDATA_PREFIX if bundled data exists
-        if os.path.exists(tess_data):
-            os.environ["TESSDATA_PREFIX"] = tess_data
-            logging.info(f"Tessdata Prefix: {tess_data}")
+        # TESSDATA Logic: Use writable user directory
+        import shutil
+        
+        # 1. Define User Writable Tessdata Dir
+        user_data_dir = os.path.join(os.path.expanduser("~"), ".local", "share", "BiplobOCR")
+        writable_tessdata = os.path.join(user_data_dir, "tessdata")
+        os.makedirs(writable_tessdata, exist_ok=True)
+        
+        # 2. Check if we have bundled data (read-only source)
+        bundled_tessdata = os.path.join(tess_bin, "tessdata")
+        
+        if os.path.exists(bundled_tessdata):
+             # 3. Smart Sync: Copy essential files if missing or if forced update
+             # For now, let's ensure 'eng.traineddata', 'ben.traineddata', 'osd.traineddata' exist in writable
+             essentials = ["eng.traineddata", "ben.traineddata", "osd.traineddata"]
+             
+             # Also copy if we are running frozen (AppImage) likely meaning bundled is fresh
+             is_frozen = getattr(sys, 'frozen', False)
+             
+             for item in os.listdir(bundled_tessdata):
+                 src = os.path.join(bundled_tessdata, item)
+                 dst = os.path.join(writable_tessdata, item)
+                 
+                 # Copy if missing OR (if essential and we are immutable/frozen, maybe update?)
+                 # Simple logic: Copy if missing. User can manually update if needed.
+                 if not os.path.exists(dst):
+                     try:
+                         if os.path.isdir(src):
+                             shutil.copytree(src, dst)
+                         else:
+                             shutil.copy2(src, dst)
+                         logging.info(f"Initialized tessdata: {item}")
+                     except Exception as e:
+                         logging.error(f"Failed to copy {item}: {e}")
+        
+        # 4. Set TESSDATA_PREFIX to the WRITABLE location
+        # This allows the user to install new languages via the GUI
+        os.environ["TESSDATA_PREFIX"] = writable_tessdata
+        logging.info(f"Tessdata Prefix set to User Dir: {writable_tessdata}")
         
     except Exception as e:
         logging.error(f"Failed to setup local Tesseract: {e}")
@@ -168,7 +203,7 @@ def setup_fonts():
     """Register custom fonts from assets folder. Returns font family name on success, None on failure."""
     try:
         base_dir = get_base_dir()
-        font_path = os.path.join(base_dir, "assets", "AdorNoirrit.ttf")
+        font_path = os.path.join(base_dir, "src", "assets", "AdorNoirrit.ttf")
         
         if not os.path.exists(font_path):
             return None
@@ -212,12 +247,16 @@ def sanitize_for_linux(text):
     
     # Comprehensive replacement for emojis used in the app that crash X11
     emojis = [
-        "📜", "🏠", "➕", "📦", "🕒", "⚙️", "📂", "👁", "🗑", "✅", "🔴", "🟢", "⚠", "🟥", "◀", "▶", "🔒", "🔑", "🔍", "🖼", "📄", "❌", "🚫", "⚠️", "⛔"
+        "📜", "🏠", "➕", "📦", "🕒", "⚙️", "📂", "👁", "🗑", "✅", "🔴", "🟢", "⚠", "🟥", "◀", "▶", "🔒", "🔑", "🔍", "🖼", "📄", "❌", "🚫", "⚠️", "⛔", "🛠", "❓", "🚀"
     ]
 
     clean_text = str(text)
     for e in emojis:
         clean_text = clean_text.replace(e, "")
+    
+    # Remove any non-BMP characters (above U+FFFF) which Tkinter on Linux crashes on
+    import re
+    clean_text = re.sub(r'[^\u0000-\uFFFF]', '', clean_text)
     
     return clean_text.strip()
 

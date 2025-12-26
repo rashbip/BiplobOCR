@@ -49,20 +49,25 @@ class PDFViewer(ttk.Frame):
             btn_open.config(image=img_open, text="")
             btn_open._img = img_open
         else:
-            btn_open.config(text="📂 Open")
+            from ..core import platform_utils
+            btn_open.config(text=platform_utils.sanitize_for_linux("📂 Open"))
         btn_open.pack(side="left", padx=5)
 
         # Navigation
         btn_first = ttk.Button(self.toolbar, command=self.first_page, width=5)
         img_first = render_emoji_image("First", (MAIN_FONT, 10), "white", btn_first)
         if img_first: btn_first.config(image=img_first); btn_first._img=img_first
-        else: btn_first.config(text="First")
+        else:
+            from ..core import platform_utils
+            btn_first.config(text=platform_utils.sanitize_for_linux("First"))
         btn_first.pack(side="left", padx=1)
 
         btn_prev = ttk.Button(self.toolbar, command=self.prev_page, width=3)
         img_prev = render_emoji_image("<", (MAIN_FONT, 10), "white", btn_prev)
         if img_prev: btn_prev.config(image=img_prev); btn_prev._img=img_prev
-        else: btn_prev.config(text="<")
+        else:
+            from ..core import platform_utils
+            btn_prev.config(text=platform_utils.sanitize_for_linux("<"))
         btn_prev.pack(side="left", padx=1)
 
         self.lbl_page = EmojiLabel(self.toolbar, text="0 / 0", font=(MAIN_FONT, 12))
@@ -71,13 +76,17 @@ class PDFViewer(ttk.Frame):
         btn_next = ttk.Button(self.toolbar, command=self.next_page, width=3)
         img_next = render_emoji_image(">", (MAIN_FONT, 10), "white", btn_next)
         if img_next: btn_next.config(image=img_next); btn_next._img=img_next
-        else: btn_next.config(text=">")
+        else:
+            from ..core import platform_utils
+            btn_next.config(text=platform_utils.sanitize_for_linux(">"))
         btn_next.pack(side="left", padx=1)
 
         btn_last = ttk.Button(self.toolbar, command=self.last_page, width=5)
         img_last = render_emoji_image("Last", (MAIN_FONT, 10), "white", btn_last)
         if img_last: btn_last.config(image=img_last); btn_last._img=img_last
-        else: btn_last.config(text="Last")
+        else:
+            from ..core import platform_utils
+            btn_last.config(text=platform_utils.sanitize_for_linux("Last"))
         btn_last.pack(side="left", padx=1)
 
         
@@ -87,7 +96,9 @@ class PDFViewer(ttk.Frame):
         btn_zout = ttk.Button(self.toolbar, command=self.zoom_out, width=3)
         img_zout = render_emoji_image("-", (MAIN_FONT, 10), "white", btn_zout)
         if img_zout: btn_zout.config(image=img_zout); btn_zout._img=img_zout
-        else: btn_zout.config(text="-")
+        else:
+            from ..core import platform_utils
+            btn_zout.config(text=platform_utils.sanitize_for_linux("-"))
         btn_zout.pack(side="left")
 
         self.lbl_zoom = EmojiLabel(self.toolbar, text="100%", font=(MAIN_FONT, 12))
@@ -96,7 +107,9 @@ class PDFViewer(ttk.Frame):
         btn_zin = ttk.Button(self.toolbar, command=self.zoom_in, width=3)
         img_zin = render_emoji_image("+", (MAIN_FONT, 10), "white", btn_zin)
         if img_zin: btn_zin.config(image=img_zin); btn_zin._img=img_zin
-        else: btn_zin.config(text="+")
+        else:
+            from ..core import platform_utils
+            btn_zin.config(text=platform_utils.sanitize_for_linux("+"))
         btn_zin.pack(side="left")
 
         
@@ -106,7 +119,9 @@ class PDFViewer(ttk.Frame):
         btn_rot = ttk.Button(self.toolbar, command=self.rotate_view)
         img_rot = render_emoji_image("Rotate", (MAIN_FONT, 10), "white", btn_rot)
         if img_rot: btn_rot.config(image=img_rot); btn_rot._img=img_rot
-        else: btn_rot.config(text="Rotate")
+        else:
+            from ..core import platform_utils
+            btn_rot.config(text=platform_utils.sanitize_for_linux("Rotate"))
         btn_rot.pack(side="left", padx=2)
 
         

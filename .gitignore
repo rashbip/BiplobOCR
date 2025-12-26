@@ -3,13 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Distribution / Packaging
-dist/
-build/
-# *.spec (Allowing spec files for build reproducibility)
-*.egg-info/
-
-
 # VS Code
 .vscode/
 

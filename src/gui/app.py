@@ -67,6 +67,30 @@ class BiplobOCR(TkinterDnD.Tk):
         self.geometry("1400x900") 
         self.minsize(1100, 750)
         self.configure(bg=BG_COLOR)
+
+        # Icon and Window Class
+        try:
+            from ..core.platform_utils import get_base_dir
+            icon_path = os.path.join(get_base_dir(), "assets", "icon.png")
+            if os.path.exists(icon_path):
+                 from PIL import Image, ImageTk
+                 # High res icon for taskbar
+                 img = Image.open(icon_path)
+                 photo = ImageTk.PhotoImage(img)
+                 self.iconphoto(True, photo)
+                 
+                 # Set Windows specific icon if needed
+                 if os.name == 'nt':
+                     self.iconbitmap(os.path.join(get_base_dir(), "assets", "icon.ico"))
+        except Exception as e:
+            print(f"Failed to load icon: {e}")
+
+        # Taskbar grouping on Linux (fix for 'tk' name)
+        # Try to set WM_CLASS
+        try:
+             self.tk.call('wm', 'iconname', self._w, "BiplobOCR")
+             self.tk.call('wm', 'group', self._w, ".")
+        except: pass
         
         # Flags
         self.stop_processing_flag = False
@@ -159,7 +183,7 @@ class BiplobOCR(TkinterDnD.Tk):
         # Header
         self.sidebar_header = ttk.Frame(self.sidebar, padding=20)
         self.sidebar_header.pack(fill="x")
-        EmojiLabel(self.sidebar_header, text="📜 BiplobOCR", style="Header.TLabel", 
+        EmojiLabel(self.sidebar_header, text=platform_utils.sanitize_for_linux("📜 BiplobOCR"), style="Header.TLabel", 
                    font=(HEADER_FONT, 30, "bold"), foreground=THEME_COLOR).pack(anchor="w")
 
 
@@ -187,7 +211,7 @@ class BiplobOCR(TkinterDnD.Tk):
         self.btn_settings = self._create_nav_btn(app_state.t("nav_settings", sanitize=False), "settings", parent=self.footer_frame)
 
 
-        self.lbl_help = EmojiLabel(self.footer_frame, text=app_state.t("lbl_help"), foreground="gray", 
+        self.lbl_help = EmojiLabel(self.footer_frame, text=app_state.t("lbl_help", sanitize=True), foreground="gray", 
                   font=(MAIN_FONT, 14), cursor="hand2")
 
 
@@ -219,7 +243,7 @@ class BiplobOCR(TkinterDnD.Tk):
             self.btn_cancel_global.config(image=img_stop, text="")
             self.btn_cancel_global._img = img_stop # Keep reference
         else:
-            self.btn_cancel_global.config(text="🟥 STOP")
+            self.btn_cancel_global.config(text=platform_utils.sanitize_for_linux("🟥 STOP"))
 
 
 
@@ -232,7 +256,7 @@ class BiplobOCR(TkinterDnD.Tk):
             self.btn_show_log.config(image=img_log, text="")
             self.btn_show_log._img = img_log
         else:
-            self.btn_show_log.config(text="👁 See process")
+            self.btn_show_log.config(text=platform_utils.sanitize_for_linux("👁 See process"))
 
 
 
@@ -267,7 +291,7 @@ class BiplobOCR(TkinterDnD.Tk):
             btn.config(image=img, text="")
             btn._img = img # Keep reference
         else:
-            btn.config(text=text)
+            btn.config(text=platform_utils.sanitize_for_linux(text))
             
         btn.pack(fill="x", pady=2)
         return btn

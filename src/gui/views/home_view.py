@@ -39,7 +39,7 @@ class HomeView(ttk.Frame):
         card1.pack(side="left", fill="both", expand=True, padx=(0, 10))
         c1_inner = ttk.Frame(card1, padding=30, style="Card.TFrame")
         c1_inner.pack(fill="both", expand=True)
-        EmojiLabel(c1_inner, text="📂", font=(MAIN_FONT, 48), background=SURFACE_COLOR).pack(pady=(0,10))
+        EmojiLabel(c1_inner, text=platform_utils.sanitize_for_linux("📂"), font=(MAIN_FONT, 48), background=SURFACE_COLOR).pack(pady=(0,10))
         EmojiLabel(c1_inner, text=app_state.t("card_new_task"), font=(MAIN_FONT, 22, "bold"), background=SURFACE_COLOR).pack()
         EmojiLabel(c1_inner, text=app_state.t("card_new_desc"), font=(MAIN_FONT, 16), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
 
@@ -62,7 +62,7 @@ class HomeView(ttk.Frame):
         card2.pack(side="left", fill="both", expand=True, padx=(10, 0))
         c2_inner = ttk.Frame(card2, padding=30, style="Card.TFrame")
         c2_inner.pack(fill="both", expand=True)
-        EmojiLabel(c2_inner, text="📦", font=(MAIN_FONT, 48), background=SURFACE_COLOR).pack(pady=(0,10))
+        EmojiLabel(c2_inner, text=platform_utils.sanitize_for_linux("📦"), font=(MAIN_FONT, 48), background=SURFACE_COLOR).pack(pady=(0,10))
         EmojiLabel(c2_inner, text=app_state.t("batch_title"), font=(MAIN_FONT, 22, "bold"), background=SURFACE_COLOR).pack()
         EmojiLabel(c2_inner, text="Process multiple PDFs at once", font=(MAIN_FONT, 16), foreground="gray", background=SURFACE_COLOR).pack(pady=5)
 
@@ -146,7 +146,7 @@ class HomeView(ttk.Frame):
             btn_src.config(image=img_src, text="")
             btn_src._img = img_src
         else:
-            btn_src.config(text="📂 Src")
+            btn_src.config(text=platform_utils.sanitize_for_linux("📂 Src"))
         btn_src.pack(side="left", padx=2)
         if not source: btn_src.config(state="disabled")
 
@@ -164,7 +164,7 @@ class HomeView(ttk.Frame):
             btn_out.config(image=img_out, text="")
             btn_out._img = img_out
         else:
-            btn_out.config(text="👁️ View")
+            btn_out.config(text=platform_utils.sanitize_for_linux("👁️ View"))
         btn_out.pack(side="left", padx=2)
 
         
@@ -185,6 +185,6 @@ class HomeView(ttk.Frame):
             btn_del.config(image=img_del, text="")
             btn_del._img = img_del
         else:
-            btn_del.config(text="🗑️")
+            btn_del.config(text=platform_utils.sanitize_for_linux("🗑️"))
 
         btn_del.pack(side="left", padx=2)

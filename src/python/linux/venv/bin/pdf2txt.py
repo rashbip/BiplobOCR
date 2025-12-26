@@ -1,4 +1,4 @@
-#!/home/rashidul/Desktop/Python Apps/BiplobOCR/src/python/linux/venv/bin/python3
+#!/home/rashidul/Desktop/Python Apps/BiplobOCR/src/python/linux/venv/bin/python
 """A command line tool for extracting text and images from PDF and
 output it to plain text, html, xml or tags.
 """

@@ -1,4 +1,4 @@
-#!/home/rashidul/Desktop/Python Apps/BiplobOCR/src/python/linux/venv/bin/python3
+#!/home/rashidul/Desktop/Python Apps/BiplobOCR/src/python/linux/venv/bin/python
 """Extract pdf structure in XML format"""
 
 import logging

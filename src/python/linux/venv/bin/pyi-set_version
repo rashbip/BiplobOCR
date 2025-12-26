@@ -1,5 +1,5 @@
 #!/bin/sh
-'''exec' "/home/rashidul/Desktop/Python Apps/BiplobOCR/src/python/linux/venv/bin/python3" "$0" "$@"
+'''exec' "/home/rashidul/Desktop/Python Apps/BiplobOCR/src/python/linux/venv/bin/python" "$0" "$@"
 ' '''
 # -*- coding: utf-8 -*-
 import re

@@ -117,7 +117,8 @@ class HistoryView(ttk.Frame):
             btn_src.config(image=img_src, text="")
             btn_src._img = img_src
         else:
-            btn_src.config(text="📄 Src")
+            from ...core import platform_utils
+            btn_src.config(text=platform_utils.sanitize_for_linux("📄 Src"))
         btn_src.pack(side="left", padx=2)
 
 
@@ -137,7 +138,8 @@ class HistoryView(ttk.Frame):
             btn_out.config(image=img_out, text="")
             btn_out._img = img_out
         else:
-            btn_out.config(text="👁 View")
+            from ...core import platform_utils
+            btn_out.config(text=platform_utils.sanitize_for_linux("👁 View"))
         btn_out.pack(side="left", padx=2)
 
 
@@ -160,7 +162,7 @@ class HistoryView(ttk.Frame):
             btn_del.config(image=img_del, text="")
             btn_del._img = img_del
         else:
-            btn_del.config(text="🗑")
+            btn_del.config(text=platform_utils.sanitize_for_linux("🗑"))
         btn_del.pack(side="left", padx=2)
 
 

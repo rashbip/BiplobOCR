@@ -65,7 +65,8 @@ class ScanView(ttk.Frame):
             btn_open.config(image=img_open, text="")
             btn_open._img = img_open
         else:
-            btn_open.config(text=app_state.t("btn_open_computer", sanitize=False))
+            from ...core import platform_utils
+            btn_open.config(text=platform_utils.sanitize_for_linux(app_state.t("btn_open_computer", sanitize=False)))
 
 
         btn_open.pack(fill="x", pady=2)
@@ -118,7 +119,8 @@ class ScanView(ttk.Frame):
             self.controller.btn_process.config(image=img_proc)
             self.controller.btn_process._img = img_proc
         else:
-            self.controller.btn_process.config(text=app_state.t("btn_process"))
+            from ...core import platform_utils
+            self.controller.btn_process.config(text=platform_utils.sanitize_for_linux(app_state.t("btn_process")))
 
         self.controller.btn_process.pack(fill="x", pady=20)
         

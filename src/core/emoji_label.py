@@ -85,12 +85,20 @@ class EmojiLabel(ttk.Label):
             self.set_text(text, font)
 
     def configure(self, cnf=None, **kwargs):
-        if IS_LINUX and Pilmoji:
-            if cnf: kwargs.update(cnf)
+        if cnf: kwargs.update(cnf)
+        
+        # Intercept text on Linux for both Image rendering OR Sanitization
+        if IS_LINUX:
             if "text" in kwargs:
                 text = kwargs.pop("text")
                 font = kwargs.get("font") or self._last_font
                 self.set_text(text, font)
+                
+        # For non-Linux, or if text was popping above, continue
+        # Note: set_text calls super().config(), so we might duplicate config calls if we don't return here?
+        # Actually set_text handles the configuration of text/image.
+        # But we still need to pass other kwargs (bg, fg) to super.
+        
         return super().configure(**kwargs)
 
     def config(self, cnf=None, **kwargs):
@@ -103,11 +111,17 @@ class EmojiLabel(ttk.Label):
             return
 
         if not IS_LINUX or not Pilmoji:
+            try:
+                from . import platform_utils
+                text = platform_utils.sanitize_for_linux(text)
+            except: pass
             super().config(text=text)
             if font: super().config(font=font)
             return
 
         # On Linux, render entirely to image
+        # import logging
+        # logging.info(f"DEBUG_RENDER: '{text}'")
         try:
             from .platform_utils import get_base_dir
             
@@ -173,4 +187,6 @@ class EmojiLabel(ttk.Label):
         except Exception as e:
             import logging
             logging.error(f"EmojiLabel error: {e}")
-            super().config(text=text)
+            from . import platform_utils
+            safe_text = platform_utils.sanitize_for_linux(text)
+            super().config(text=safe_text)

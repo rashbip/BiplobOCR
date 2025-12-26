@@ -152,7 +152,8 @@ class SettingsView(ttk.Frame):
             btn_add_pack.config(image=img_add, text="")
             btn_add_pack._img = img_add
         else:
-            btn_add_pack.config(text="➕ Add Data Pack")
+            from ...core import platform_utils
+            btn_add_pack.config(text=platform_utils.sanitize_for_linux("➕ Add Data Pack"))
         btn_add_pack.pack(anchor="w", pady=10)
 
 
@@ -185,7 +186,8 @@ class SettingsView(ttk.Frame):
             btn_reset.config(image=img_reset, text="")
             btn_reset._img = img_reset
         else:
-            btn_reset.config(text="♻️ Factory Reset")
+            from ...core import platform_utils
+            btn_reset.config(text=platform_utils.sanitize_for_linux("♻️ Factory Reset"))
         btn_reset.pack(anchor="w", pady=10)
 
 
@@ -258,7 +260,9 @@ class SettingsView(ttk.Frame):
             
             # Icon/Name
             icon = "🔴" if is_disabled else "🟢"
-            lbl = EmojiLabel(row, text=f"{icon} {clean_name}", font=(MAIN_FONT, 16))
+            from ...core import platform_utils
+            safe_icon = platform_utils.sanitize_for_linux(icon)
+            lbl = EmojiLabel(row, text=f"{safe_icon} {clean_name}", font=(MAIN_FONT, 16))
 
 
 
@@ -310,7 +314,8 @@ class SettingsView(ttk.Frame):
                 btn_del.config(image=img_trash, text="")
                 btn_del._img = img_trash
             else:
-                btn_del.config(text="🗑️")
+                from ...core import platform_utils
+                btn_del.config(text=platform_utils.sanitize_for_linux("🗑"))
 
 
 
@@ -323,7 +328,8 @@ class SettingsView(ttk.Frame):
                 btn_toggle.config(image=img_tgl, text="")
                 btn_toggle._img = img_tgl
             else:
-                btn_toggle.config(text=toggle_txt)
+                from ...core import platform_utils
+                btn_toggle.config(text=platform_utils.sanitize_for_linux(toggle_txt))
             btn_toggle.pack(side="right", padx=2)
 
 
