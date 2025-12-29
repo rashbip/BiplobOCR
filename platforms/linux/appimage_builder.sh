@@ -74,7 +74,7 @@ mkdir -p "$APP_DIR/usr/share/applications"
 cp -r "$DIST_DIR/$APP_NAME/"* "$APP_DIR/usr/bin/"
 
 # Copy Zenity (Self-Sufficient!)
-ZENITY_PATH=$(which zenity)
+ZENITY_PATH=$(command -v zenity || true)
 if [ ! -f "$ZENITY_PATH" ]; then
     # Fallback to our bundled one if system one is missing
     ZENITY_PATH="$SRC_DIR/bin/linux/zenity"
